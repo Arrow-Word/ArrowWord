@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arrow Word Puzzles</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f5f0ff;color:#222;min-height:100vh}
+
+/* ── Nav ── */
+nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.nav-brand{font-size:20px;font-weight:700;letter-spacing:-0.5px;text-decoration:none;color:#fff}
+.nav-brand span{color:#e8d8ff}
+.nav-links{display:flex;gap:8px;flex-wrap:wrap}
+.nav-links a{color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500;transition:background .15s}
+.nav-links a:hover{background:rgba(255,255,255,0.15)}
+.nav-links a.active{background:rgba(255,255,255,0.2);color:#fff}
+
+/* ── Hero ── */
+.hero{background:linear-gradient(135deg,#7744bb 0%,#9955cc 50%,#6633aa 100%);color:#fff;text-align:center;padding:72px 24px 80px}
+.hero h1{font-size:clamp(28px,6vw,56px);font-weight:700;margin-bottom:16px;line-height:1.1}
+.hero h1 span{color:#e8d8ff}
+.hero p{font-size:clamp(15px,2.5vw,20px);color:#d8c8f8;max-width:560px;margin:0 auto 32px;line-height:1.6}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-block;padding:14px 28px;border-radius:8px;font-size:16px;font-weight:600;text-decoration:none;cursor:pointer;border:none;transition:transform .12s,box-shadow .12s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.2)}
+.btn-primary{background:#fff;color:#7744bb}
+.btn-secondary{background:rgba(255,255,255,0.15);color:#fff;border:2px solid rgba(255,255,255,0.4)}
+.btn-secondary:hover{background:rgba(255,255,255,0.25)}
+
+/* ── Puzzle preview grid in hero ── */
+.hero-grid-wrap{margin:40px auto 0;max-width:280px;opacity:0.9}
+.mini-grid{border-collapse:collapse;margin:0 auto;border:2px solid rgba(255,255,255,0.3);border-radius:4px;overflow:hidden}
+.mini-grid td{width:36px;height:36px;border:1px solid rgba(255,255,255,0.2);font-size:13px;font-weight:700;text-align:center;vertical-align:middle}
+.mc{background:rgba(136,68,204,0.5);font-size:7px;color:#e8d8ff;font-weight:600;padding:2px}
+.ma{background:rgba(234,245,228,0.85);color:#222}
+.mb{background:rgba(0,0,0,0.5)}
+
+/* ── Features ── */
+.features{padding:64px 24px;background:#fff}
+.section-title{text-align:center;font-size:clamp(22px,4vw,32px);font-weight:700;color:#443366;margin-bottom:8px}
+.section-sub{text-align:center;font-size:15px;color:#777;margin-bottom:48px}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:960px;margin:0 auto}
+.feature-card{background:#f9f7ff;border:1px solid #e8e0f0;border-radius:12px;padding:24px;text-align:center}
+.feature-icon{font-size:36px;margin-bottom:12px}
+.feature-card h3{font-size:16px;font-weight:700;color:#443366;margin-bottom:8px}
+.feature-card p{font-size:13px;color:#666;line-height:1.6}
+
+/* ── Recent puzzles strip ── */
+.recent{padding:56px 24px;background:#f5f0ff}
+.recent-inner{max-width:960px;margin:0 auto}
+.recent h2{font-size:22px;font-weight:700;color:#443366;margin-bottom:4px}
+.recent-sub{font-size:13px;color:#888;margin-bottom:24px}
+.puzzle-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+.puzzle-card{background:#fff;border:1px solid #e0d8f0;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;text-decoration:none;color:#222;transition:box-shadow .15s,transform .12s}
+.puzzle-card:hover{box-shadow:0 4px 16px rgba(119,68,187,0.15);transform:translateY(-2px)}
+.puzzle-card-title{font-size:14px;font-weight:700;color:#443366;line-height:1.3}
+.puzzle-card-meta{font-size:11px;color:#999}
+.puzzle-card-btn{margin-top:auto;background:#7744bb;color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;text-align:center}
+.empty-strip{font-size:14px;color:#999;font-style:italic;padding:16px 0}
+.view-all{display:inline-block;margin-top:16px;color:#7744bb;font-size:14px;font-weight:600;text-decoration:none}
+.view-all:hover{text-decoration:underline}
+
+/* ── CTA ── */
+.cta{background:#7744bb;color:#fff;text-align:center;padding:56px 24px}
+.cta h2{font-size:clamp(22px,4vw,32px);font-weight:700;margin-bottom:12px}
+.cta p{font-size:15px;color:#d8c8f8;margin-bottom:28px;max-width:480px;margin-left:auto;margin-right:auto}
+
+/* ── Footer ── */
+footer{background:#2a1a44;color:#9980cc;text-align:center;padding:20px;font-size:12px}
+footer a{color:#b8a0e8;text-decoration:none}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="index.html">Arrow<span>Word</span></a>
+  <div class="nav-links">
+    <a href="index.html" class="active">Home</a>
+    <a href="directory.html">Puzzles</a>
+    <a href="builder.html">Builder</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1>Arrow Word<br><span>Puzzles</span></h1>
+  <p>Create, solve and share arrow word puzzles. Build your own, publish for friends and family, or solve puzzles from the directory.</p>
+  <div class="hero-btns">
+    <a href="builder.html" class="btn btn-primary">🧩 Start building</a>
+    <a href="directory.html" class="btn btn-secondary">📖 Browse puzzles</a>
+  </div>
+  <div class="hero-grid-wrap">
+    <table class="mini-grid">
+      <tr>
+        <td class="mc" style="font-size:6px;line-height:1.1">Fruit<br>→</td>
+        <td class="ma">A</td><td class="ma">P</td><td class="ma">P</td><td class="ma">L</td><td class="ma">E</td>
+      </tr>
+      <tr>
+        <td class="mb"></td>
+        <td class="ma">N</td><td class="mb"></td><td class="ma">I</td><td class="mb"></td><td class="ma">L</td>
+      </tr>
+      <tr>
+        <td class="mc" style="font-size:6px;line-height:1.1">Colour<br>→</td>
+        <td class="ma">T</td><td class="ma">A</td><td class="ma">N</td><td class="mb"></td><td class="ma">M</td>
+      </tr>
+      <tr>
+        <td class="mb"></td>
+        <td class="mb"></td><td class="mb"></td><td class="ma">K</td><td class="mb"></td><td class="ma">S</td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<section class="features">
+  <div class="section-title">Everything you need</div>
+  <div class="section-sub">A complete arrow word puzzle experience in your browser</div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">✏️</div>
+      <h3>Easy builder</h3>
+      <p>Click cells to add clues, answers and arrows. 12 arrow directions, multiple clues per cell, drag to reorder.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📤</div>
+      <h3>Share & publish</h3>
+      <p>Publish a puzzle to the directory so anyone can find and solve it. Or export as a file to send directly.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📱</div>
+      <h3>Works on mobile</h3>
+      <p>Pinch to zoom, tap to navigate, solve on the go. Add to your home screen for a real app feel.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💾</div>
+      <h3>Auto-saves your work</h3>
+      <p>Your puzzles are saved in your browser automatically. Export a library backup any time.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🖨️</div>
+      <h3>Print ready</h3>
+      <p>Every puzzle has a clean print view — blank grid ready for solving on paper.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎉</div>
+      <h3>Celebration!</h3>
+      <p>Solve a puzzle completely and get a little celebration. Well done is always worth saying.</p>
+    </div>
+  </div>
+</section>
+
+<section class="recent">
+  <div class="recent-inner">
+    <h2>Recently published</h2>
+    <p class="recent-sub">Puzzles added to the directory from this browser</p>
+    <div class="puzzle-strip" id="recent-strip">
+      <div class="empty-strip">No puzzles published yet. <a href="builder.html" style="color:#7744bb;font-weight:600">Build one!</a></div>
+    </div>
+    <a href="directory.html" class="view-all">View all puzzles →</a>
+  </div>
+</section>
+
+<section class="cta">
+  <h2>Ready to build your first puzzle?</h2>
+  <p>It only takes a few minutes. Click a cell, type your clue and answer, pick a direction — done.</p>
+  <a href="builder.html" class="btn btn-primary">Open the builder →</a>
+</section>
+
+<footer>
+  <p>Arrow Word Puzzle Builder &nbsp;·&nbsp; <a href="builder.html">Builder</a> &nbsp;·&nbsp; <a href="directory.html">Directory</a></p>
+</footer>
+
+<script src="puzzles.js"></script>
+<script>
+// Show up to 4 most recent published puzzles
+function loadRecent() {
+  const list = getRegistry().slice(0, 4);
+  const strip = document.getElementById('recent-strip');
+  if (!list.length) return; // keep default message
+  strip.innerHTML = list.map(p => `
+    <a class="puzzle-card" href="directory.html?id=${p.id}">
+      <div class="puzzle-card-title">${escHtml(p.title)}</div>
+      <div class="puzzle-card-meta">Published ${p.publishedAt}</div>
+      <div class="puzzle-card-btn">Solve →</div>
+    </a>
+  `).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+loadRecent();
+</script>
+</body>
+</html>
