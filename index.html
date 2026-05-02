@@ -102,32 +102,28 @@ footer a{color:#b8a0e8;text-decoration:none}
   <p>Arrow Word Puzzle Builder &nbsp;·&nbsp; <a href="builder.html">Builder</a> &nbsp;·&nbsp; <a href="directory.html">Directory</a></p>
 </footer>
 
+<script src="github-storage.js"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
 async function loadRecent(){
-  const strip = document.getElementById('recent-strip');
-  try {
-    const res = await fetch('/api/puzzles');
-    if(!res.ok) throw new Error('Server error');
-    const list = await res.json();
-    const recent = list.slice(0,4);
+  const strip=document.getElementById('recent-strip');
+  try{
+    const list=await ghGetPuzzles();
+    const recent=list.slice(0,4);
     if(!recent.length){
       strip.innerHTML='<div style="color:#999;font-style:italic;font-size:14px">No puzzles published yet. <a href="builder.html" style="color:#7744bb;font-weight:600">Build one!</a></div>';
       return;
     }
-    strip.innerHTML = recent.map(p=>`
+    strip.innerHTML=recent.map(p=>`
       <div class="puzzle-card" onclick="location.href='directory.html?id=${p.id}'">
         <div class="puzzle-card-title">${escHtml(p.title)}</div>
-        <div class="puzzle-card-meta">${p.publishedAt} · ${p.cols}×${p.rows}</div>
+        <div class="puzzle-card-meta">${p.publishedAt}${p.cols&&p.rows?' · '+p.cols+'×'+p.rows:''}</div>
         <div class="puzzle-card-btn">Solve →</div>
-      </div>
-    `).join('');
-  } catch(e) {
+      </div>`).join('');
+  }catch(e){
     strip.innerHTML='<div style="color:#aaa;font-size:13px">Could not load puzzles right now.</div>';
   }
 }
-
 loadRecent();
 </script>
 </body>

@@ -121,15 +121,15 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
 </style>
 </head>
 <body>
-<nav style="background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:0">
-  <a style="font-size:18px;font-weight:700;letter-spacing:-0.5px;text-decoration:none;color:#fff" href="index.html">Arrow<span style="color:#e8d8ff">Word</span></a>
+<nav style="background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+  <a style="font-size:18px;font-weight:700;text-decoration:none;color:#fff" href="index.html">Arrow<span style="color:#e8d8ff">Word</span></a>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <a style="color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="index.html">Home</a>
     <a style="color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="directory.html">Puzzles</a>
     <a style="background:rgba(255,255,255,0.2);color:#fff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="builder.html">Builder</a>
   </div>
 </nav>
-<script src="puzzles.js"></script>
+<script src="github-storage.js"></script>
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
@@ -249,6 +249,10 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
       <button class="tool-btn" style="background:#ede0ff;color:#443366;border-color:#9966cc;font-weight:600" onclick="publishToWeb()">🌐 Publish to web directory</button>
       <button class="tool-btn" onclick="document.getElementById('import-file').click()">Import puzzle from file</button>
       <input type="file" id="import-file" accept=".html,.json" style="display:none" onchange="importPuzzle(event)">
+    </div>
+    <div style="margin-top:8px">
+      <button class="tool-btn" style="font-size:11px;color:#999;border-color:#ddd" onclick="clearGhToken()">Reset GitHub token</button>
+      <span style="font-size:11px;color:#bbb;margin-left:6px">Only needed if publishing stops working</span>
     </div>
   </div>
   <div class="save-section">
@@ -2003,28 +2007,58 @@ document.querySelectorAll('.modal-bg').forEach(function(m){
   m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});
 });
 
-// ── Publish to web directory ──────────────────────────────────────────────────
-function publishToWeb(overrideName){
-  const name=overrideName||(document.getElementById('puzzle-name').value||'').trim();
-  if(!name){alert('Please give your puzzle a name before publishing to the web directory.');return;}
-  const hasContent=G.some(row=>row.some(cell=>cell.t!=='empty'));
-  if(!hasContent){alert('The puzzle is empty — add some clues first.');return;}
-  const confirmed=confirm('Publish "'+name+'" to the web directory?\n\nIt will appear on the Puzzles page so anyone using this site can find and solve it.');
-  if(!confirmed)return;
-  const id=publishToRegistry(name,gridToData());
-  alert('✓ "'+name+'" is now live in the puzzle directory!\n\nGo to the Puzzles page to see it, or share the directory link with anyone.');
-  // Open directory in new tab so they can see it immediately
-  window.open('directory.html','_blank');
+// ── Publish to GitHub web directory ──────────────────────────────────────────
+async function publishToWeb(overrideName) {
+  const name = overrideName || (document.getElementById('puzzle-name').value || '').trim();
+  if (!name) { alert('Please give your puzzle a name before publishing to the web directory.\n\nType a name in the "Puzzle name" field on the Save & Load tab, or save it first.'); return; }
+  const hasContent = G.some(row => row.some(cell => cell.t !== 'empty'));
+  if (!hasContent) { alert('The puzzle is empty — add some clues first.'); return; }
+  if (!confirm('Publish "' + name + '" to the live web directory?\n\nAnyone visiting the site will be able to find and solve it.')) return;
+  const token = await ghPromptToken();
+  if (!token) return;
+  const btn = event && event.target;
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '⏳ Publishing…'; btn.disabled = true; }
+  try {
+    await ghPublishPuzzle(name, gridToData(), token);
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+    const goDir = confirm('✓ "' + name + '" is now live in the puzzle directory!\n\nOpen the directory to see it?');
+    if (goDir) window.open('directory.html', '_blank');
+  } catch (e) {
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+    // If token was bad, clear it so they can re-enter
+    if (e.message && (e.message.includes('Bad credentials') || e.message.includes('401') || e.message.includes('403'))) {
+      localStorage.removeItem('gh_token');
+      alert('Token error: ' + e.message + '\n\nYour saved token has been cleared. Please try again with a valid token.');
+    } else {
+      alert('Could not publish: ' + e.message);
+    }
+  }
 }
 
-function publishSavedToWeb(i){
-  const list=getSaved();if(!list[i])return;
-  const p=list[i];
-  const confirmed=confirm('Publish "'+p.name+'" to the web directory?');
-  if(!confirmed)return;
-  publishToRegistry(p.name,p.data);
-  alert('✓ "'+p.name+'" is now live in the puzzle directory!');
-  window.open('directory.html','_blank');
+async function publishSavedToWeb(i) {
+  const list = getSaved(); if (!list[i]) return;
+  const p = list[i];
+  if (!confirm('Publish "' + p.name + '" to the live web directory?')) return;
+  const token = await ghPromptToken(); if (!token) return;
+  try {
+    await ghPublishPuzzle(p.name, p.data, token);
+    const goDir = confirm('✓ "' + p.name + '" is now live!\n\nOpen the directory?');
+    if (goDir) window.open('directory.html', '_blank');
+  } catch (e) {
+    if (e.message && (e.message.includes('Bad credentials') || e.message.includes('401') || e.message.includes('403'))) {
+      localStorage.removeItem('gh_token');
+      alert('Token error: ' + e.message + '\n\nToken cleared — please try again.');
+    } else {
+      alert('Could not publish: ' + e.message);
+    }
+  }
+}
+
+// Clear saved GitHub token (in case user wants to reset it)
+function clearGhToken() {
+  localStorage.removeItem('gh_token');
+  alert('GitHub token cleared. You will be asked for it again next time you publish.');
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
