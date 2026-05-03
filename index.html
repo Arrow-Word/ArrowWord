@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Arrow Word Puzzles</title>
+<!-- v15: Switched to JSONBin cloud storage. Anyone can publish puzzles. -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;background:#f5f0ff;color:#222;min-height:100vh}
@@ -36,7 +37,7 @@ nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:cen
 .recent h2{font-size:22px;font-weight:700;color:#443366;margin-bottom:4px}
 .recent-sub{font-size:13px;color:#888;margin-bottom:24px}
 .puzzle-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
-.puzzle-card{background:#fff;border:1px solid #e0d8f0;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;text-decoration:none;color:#222;transition:box-shadow .15s,transform .12s;cursor:pointer}
+.puzzle-card{background:#fff;border:1px solid #e0d8f0;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;cursor:pointer;transition:box-shadow .15s,transform .12s}
 .puzzle-card:hover{box-shadow:0 4px 16px rgba(119,68,187,0.15);transform:translateY(-2px)}
 .puzzle-card-title{font-size:14px;font-weight:700;color:#443366;line-height:1.3}
 .puzzle-card-meta{font-size:11px;color:#999}
@@ -60,7 +61,6 @@ footer a{color:#b8a0e8;text-decoration:none}
     <a href="builder.html">Builder</a>
   </div>
 </nav>
-
 <section class="hero">
   <h1>Arrow Word<br><span>Puzzles</span></h1>
   <p>Create, solve and share arrow word puzzles. Build your own, publish for everyone, or browse the directory.</p>
@@ -69,20 +69,18 @@ footer a{color:#b8a0e8;text-decoration:none}
     <a href="directory.html" class="btn btn-secondary">📖 Browse puzzles</a>
   </div>
 </section>
-
 <section class="features">
   <div class="section-title">Everything you need</div>
   <div class="section-sub">A complete arrow word puzzle experience in your browser</div>
   <div class="features-grid">
-    <div class="feature-card"><div class="feature-icon">✏️</div><h3>Easy builder</h3><p>Click cells to add clues, answers and arrows. 12 arrow directions, multiple clues per cell, drag to reorder.</p></div>
-    <div class="feature-card"><div class="feature-icon">🌐</div><h3>Publish to the web</h3><p>One click to publish a puzzle to the public directory. Anyone in the world can find and solve it instantly.</p></div>
+    <div class="feature-card"><div class="feature-icon">✏️</div><h3>Easy builder</h3><p>Click cells to add clues and answers. 12 arrow directions, multiple clues per cell, drag to reorder.</p></div>
+    <div class="feature-card"><div class="feature-icon">🌐</div><h3>Publish to the web</h3><p>One click to publish a puzzle to the public directory. Anyone can find and solve it instantly.</p></div>
     <div class="feature-card"><div class="feature-icon">📱</div><h3>Works on mobile</h3><p>Pinch to zoom, tap to navigate, solve on the go. Add to your home screen for a real app feel.</p></div>
     <div class="feature-card"><div class="feature-icon">💾</div><h3>Auto-saves your work</h3><p>Your puzzles are saved in your browser automatically. Export a library backup any time.</p></div>
     <div class="feature-card"><div class="feature-icon">🖨️</div><h3>Print ready</h3><p>Every puzzle has a clean print view — blank grid ready for solving on paper.</p></div>
     <div class="feature-card"><div class="feature-icon">🎉</div><h3>Celebration!</h3><p>Solve a puzzle completely and get a celebration. Well done is always worth saying.</p></div>
   </div>
 </section>
-
 <section class="recent">
   <div class="recent-inner">
     <h2>Recently published</h2>
@@ -91,35 +89,28 @@ footer a{color:#b8a0e8;text-decoration:none}
     <a href="directory.html" class="view-all">View all puzzles →</a>
   </div>
 </section>
-
 <section class="cta">
   <h2>Ready to build your first puzzle?</h2>
   <p>It only takes a few minutes. Click a cell, type your clue and answer, pick a direction — done.</p>
   <a href="builder.html" class="btn btn-primary">Open the builder →</a>
 </section>
-
 <footer>
-  <p>Arrow Word Puzzle Builder &nbsp;·&nbsp; <a href="builder.html">Builder</a> &nbsp;·&nbsp; <a href="directory.html">Directory</a></p>
+  <p>Arrow Word Puzzles &nbsp;·&nbsp; <a href="builder.html">Builder</a> &nbsp;·&nbsp; <a href="directory.html">Directory</a> &nbsp;·&nbsp; v15</p>
 </footer>
-
-<script src="github-storage.js"></script>
+<script src="cloud-storage.js"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 async function loadRecent(){
   const strip=document.getElementById('recent-strip');
   try{
-    const list=await ghGetPuzzles();
+    const list=await cloudGetPuzzles();
     const recent=list.slice(0,4);
-    if(!recent.length){
-      strip.innerHTML='<div style="color:#999;font-style:italic;font-size:14px">No puzzles published yet. <a href="builder.html" style="color:#7744bb;font-weight:600">Build one!</a></div>';
-      return;
-    }
-    strip.innerHTML=recent.map(p=>`
-      <div class="puzzle-card" onclick="location.href='directory.html?id=${p.id}'">
-        <div class="puzzle-card-title">${escHtml(p.title)}</div>
-        <div class="puzzle-card-meta">${p.publishedAt}${p.cols&&p.rows?' · '+p.cols+'×'+p.rows:''}</div>
-        <div class="puzzle-card-btn">Solve →</div>
-      </div>`).join('');
+    if(!recent.length){strip.innerHTML='<div style="color:#999;font-style:italic;font-size:14px">No puzzles published yet. <a href="builder.html" style="color:#7744bb;font-weight:600">Build one!</a></div>';return;}
+    strip.innerHTML=recent.map(p=>`<div class="puzzle-card" onclick="location.href='directory.html?id=${p.id}'">
+      <div class="puzzle-card-title">${escHtml(p.title)}</div>
+      <div class="puzzle-card-meta">${p.publishedAt}${p.cols&&p.rows?' · '+p.cols+'×'+p.rows:''}</div>
+      <div class="puzzle-card-btn">Solve →</div>
+    </div>`).join('');
   }catch(e){
     strip.innerHTML='<div style="color:#aaa;font-size:13px">Could not load puzzles right now.</div>';
   }

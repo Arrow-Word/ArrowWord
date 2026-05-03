@@ -4,6 +4,28 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
 <title>Puzzle Builder — Arrow Word Puzzles</title>
+<!-- Arrow Word Puzzle Builder v15
+     Changelog:
+     v15 - Switched publish-to-web from GitHub API to JSONBin.io cloud storage.
+           Anyone (including Mom) can now publish puzzles without a token or login.
+           Fixed SHA mismatch error that prevented publishing in v14.
+           Added cloud-storage.js as shared storage layer.
+     v14 - Split into multi-page site (index/builder/directory).
+           Added publish-to-web via GitHub API (now replaced in v15).
+     v13 - Added zoom controls and mobile improvements.
+     v12 - Added celebration on puzzle completion.
+     v11 - Added per-clue text size control.
+     v10 - Added drag-to-reorder clues in modal.
+     v9  - Added edit existing clue button.
+     v8  - Added confirm dialogs before deleting clues or new grid.
+     v7  - Fixed left/up direction word placement (reading order).
+     v6  - Added crossing letter conflict detection.
+     v5  - Added multiple clues per cell with divider line.
+     v4  - Added all 12 arrow directions including corners.
+     v3  - Auto-place answer letters in grid on clue entry.
+     v2  - Added visual direction picker with bent SVG arrows.
+     v1  - Initial arrow word puzzle builder.
+-->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;font-size:14px;color:#222;background:#f5f5f5;padding:16px}
@@ -129,7 +151,7 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
     <a style="background:rgba(255,255,255,0.2);color:#fff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="builder.html">Builder</a>
   </div>
 </nav>
-<script src="github-storage.js"></script>
+<script src="cloud-storage.js"></script>
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
@@ -249,10 +271,6 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
       <button class="tool-btn" style="background:#ede0ff;color:#443366;border-color:#9966cc;font-weight:600" onclick="publishToWeb()">🌐 Publish to web directory</button>
       <button class="tool-btn" onclick="document.getElementById('import-file').click()">Import puzzle from file</button>
       <input type="file" id="import-file" accept=".html,.json" style="display:none" onchange="importPuzzle(event)">
-    </div>
-    <div style="margin-top:8px">
-      <button class="tool-btn" style="font-size:11px;color:#999;border-color:#ddd" onclick="clearGhToken()">Reset GitHub token</button>
-      <span style="font-size:11px;color:#bbb;margin-left:6px">Only needed if publishing stops working</span>
     </div>
   </div>
   <div class="save-section">
@@ -2007,58 +2025,45 @@ document.querySelectorAll('.modal-bg').forEach(function(m){
   m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});
 });
 
-// ── Publish to GitHub web directory ──────────────────────────────────────────
+// ── Publish to web directory (JSONBin cloud — anyone can use) ─────────────────
 async function publishToWeb(overrideName) {
   const name = overrideName || (document.getElementById('puzzle-name').value || '').trim();
-  if (!name) { alert('Please give your puzzle a name before publishing to the web directory.\n\nType a name in the "Puzzle name" field on the Save & Load tab, or save it first.'); return; }
+  if (!name) { alert('Please give your puzzle a name first.\n\nType a name in the "Puzzle name" field on the Save & Load tab.'); return; }
   const hasContent = G.some(row => row.some(cell => cell.t !== 'empty'));
   if (!hasContent) { alert('The puzzle is empty — add some clues first.'); return; }
-  if (!confirm('Publish "' + name + '" to the live web directory?\n\nAnyone visiting the site will be able to find and solve it.')) return;
-  const token = await ghPromptToken();
-  if (!token) return;
+  if (!confirm('Publish "' + name + '" to the web directory?\n\nAnyone visiting the site will be able to solve it.')) return;
   const btn = event && event.target;
   const origText = btn ? btn.textContent : '';
   if (btn) { btn.textContent = '⏳ Publishing…'; btn.disabled = true; }
   try {
-    await ghPublishPuzzle(name, gridToData(), token);
+    await cloudPublishPuzzle(name, gridToData());
     if (btn) { btn.textContent = origText; btn.disabled = false; }
-    const goDir = confirm('✓ "' + name + '" is now live in the puzzle directory!\n\nOpen the directory to see it?');
-    if (goDir) window.open('directory.html', '_blank');
-  } catch (e) {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-    // If token was bad, clear it so they can re-enter
-    if (e.message && (e.message.includes('Bad credentials') || e.message.includes('401') || e.message.includes('403'))) {
-      localStorage.removeItem('gh_token');
-      alert('Token error: ' + e.message + '\n\nYour saved token has been cleared. Please try again with a valid token.');
-    } else {
-      alert('Could not publish: ' + e.message);
+    if (confirm('✓ "' + name + '" is now live in the puzzle directory!\n\nOpen the directory to see it?')) {
+      window.open('directory.html', '_blank');
     }
+  } catch(e) {
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+    alert('Could not publish: ' + e.message + '\n\nMake sure cloud-storage.js has your JSONBin credentials.');
   }
 }
 
 async function publishSavedToWeb(i) {
   const list = getSaved(); if (!list[i]) return;
   const p = list[i];
-  if (!confirm('Publish "' + p.name + '" to the live web directory?')) return;
-  const token = await ghPromptToken(); if (!token) return;
+  if (!confirm('Publish "' + p.name + '" to the web directory?')) return;
+  const btn = event && event.target;
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '⏳…'; btn.disabled = true; }
   try {
-    await ghPublishPuzzle(p.name, p.data, token);
-    const goDir = confirm('✓ "' + p.name + '" is now live!\n\nOpen the directory?');
-    if (goDir) window.open('directory.html', '_blank');
-  } catch (e) {
-    if (e.message && (e.message.includes('Bad credentials') || e.message.includes('401') || e.message.includes('403'))) {
-      localStorage.removeItem('gh_token');
-      alert('Token error: ' + e.message + '\n\nToken cleared — please try again.');
-    } else {
-      alert('Could not publish: ' + e.message);
+    await cloudPublishPuzzle(p.name, p.data);
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+    if (confirm('✓ "' + p.name + '" is now live!\n\nOpen the directory?')) {
+      window.open('directory.html', '_blank');
     }
+  } catch(e) {
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+    alert('Could not publish: ' + e.message);
   }
-}
-
-// Clear saved GitHub token (in case user wants to reset it)
-function clearGhToken() {
-  localStorage.removeItem('gh_token');
-  alert('GitHub token cleared. You will be asked for it again next time you publish.');
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

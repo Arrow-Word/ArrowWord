@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puzzle Directory — Arrow Word Puzzles</title>
+<!-- v15: Switched to JSONBin cloud storage. Anyone can publish/view puzzles. -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;background:#f5f0ff;color:#222;min-height:100vh}
@@ -38,7 +39,6 @@ main{max-width:1000px;margin:0 auto;padding:24px}
 .empty-state{text-align:center;padding:64px 24px;color:#999;grid-column:1/-1}
 .empty-icon{font-size:48px;margin-bottom:16px}
 .loading{color:#aaa;font-style:italic;font-size:14px;padding:24px;grid-column:1/-1;text-align:center}
-/* Solver overlay */
 #solver-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.62);z-index:200;overflow-y:auto;padding:16px}
 #solver-overlay.open{display:block}
 .solver-box{background:#fff;border-radius:12px;max-width:960px;margin:0 auto;overflow:hidden}
@@ -103,15 +103,10 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
     <a href="builder.html">Builder</a>
   </div>
 </nav>
-
 <div class="page-header">
-  <div>
-    <h1>📖 Puzzle Directory</h1>
-    <p>All published puzzles — click any to solve online</p>
-  </div>
+  <div><h1>📖 Puzzle Directory</h1><p>All published puzzles — click any to solve online</p></div>
   <a href="builder.html" style="background:#7744bb;color:#fff;text-decoration:none;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:600">+ Create puzzle</a>
 </div>
-
 <main>
   <div class="dir-toolbar">
     <input type="text" id="search" placeholder="Search puzzles…" oninput="filterDir()">
@@ -126,7 +121,6 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
   <div class="puzzle-grid" id="puzzle-grid"><div class="loading">Loading puzzles…</div></div>
 </main>
 
-<!-- Solver overlay -->
 <div id="solver-overlay">
   <div class="solver-box">
     <div class="solver-header">
@@ -166,11 +160,10 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
   </div>
 </div>
 
-<script src="github-storage.js"></script>
+<script src="cloud-storage.js"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-// Arrow rendering (same as builder)
 function arrowSVG(dir,s){
   const c=s/2,m=Math.ceil(s*0.12),e=s-m,sw=Math.max(1.6,s/12),ah=s*0.34;
   function head(x,y,dx,dy){const l=Math.sqrt(dx*dx+dy*dy),nx=dx/l,ny=dy/l,px=-ny,py=nx;return`M${x-nx*ah+px*ah*0.45},${y-ny*ah+py*ah*0.45} L${x},${y} L${x-nx*ah-px*ah*0.45},${y-ny*ah-py*ah*0.45}`;}
@@ -197,20 +190,15 @@ function getWordCells(dir,ans,or,oc){
   return cells;
 }
 
-// ── Directory ──────────────────────────────────────────────────────────────────
 let allPuzzles=[];
-
 async function loadDir(){
   const grid=document.getElementById('puzzle-grid');
   grid.innerHTML='<div class="loading">Loading puzzles…</div>';
   try{
-    allPuzzles=await ghGetPuzzles();
+    allPuzzles=await cloudGetPuzzles();
     filterDir();
   }catch(e){
-    grid.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div>
-      <p>Could not load puzzles.<br><small style="color:#bbb">${escHtml(e.message)}</small></p>
-      <button onclick="loadDir()" style="background:#7744bb;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;margin-top:12px">Try again</button>
-    </div>`;
+    grid.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load puzzles.<br><small style="color:#bbb">${escHtml(e.message)}</small></p><button onclick="loadDir()" style="background:#7744bb;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;margin-top:12px">Try again</button></div>`;
   }
 }
 
@@ -223,40 +211,27 @@ function filterDir(){
   document.getElementById('count-line').textContent=list.length+' puzzle'+(list.length===1?'':'s');
   const grid=document.getElementById('puzzle-grid');
   if(!list.length){
-    grid.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div>
-      <p>${q?'No puzzles match your search.':'No puzzles published yet.'}</p>
-      <a href="builder.html" style="color:#7744bb;font-weight:600">Open the builder →</a></div>`;
+    grid.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><p>${q?'No puzzles match your search.':'No puzzles published yet.'}</p><a href="builder.html" style="color:#7744bb;font-weight:600">Open the builder →</a></div>`;
     return;
   }
-  grid.innerHTML=list.map(p=>`
-    <div class="pcard">
-      <div class="pcard-title">${escHtml(p.title)}</div>
-      <div class="pcard-meta">Published ${p.publishedAt}</div>
-      ${p.cols&&p.rows?`<div class="pcard-size">${p.cols}×${p.rows} grid</div>`:''}
-      <div class="pcard-btns">
-        <button class="btn-solve" onclick="openSolver('${p.id}')">Solve →</button>
-        <button class="btn-remove" onclick="removePuzzle('${p.id}','${escHtml(p.title).replace(/'/g,"\\'")}')">🗑</button>
-      </div>
-    </div>`).join('');
+  grid.innerHTML=list.map(p=>`<div class="pcard">
+    <div class="pcard-title">${escHtml(p.title)}</div>
+    <div class="pcard-meta">Published ${p.publishedAt}</div>
+    ${p.cols&&p.rows?`<div class="pcard-size">${p.cols}×${p.rows} grid</div>`:''}
+    <div class="pcard-btns">
+      <button class="btn-solve" onclick="openSolver('${p.id}')">Solve →</button>
+      <button class="btn-remove" onclick="removePuzzle('${p.id}','${escHtml(p.title).replace(/'/g,"\\'")}')">🗑</button>
+    </div>
+  </div>`).join('');
 }
 
 async function removePuzzle(id,title){
-  if(!confirm('Remove "'+title+'" from the directory?\nThis will update the live site.'))return;
-  const token=await ghPromptToken();
-  if(!token)return;
-  try{
-    await ghRemovePuzzle(id,token);
-    // wait a moment for GitHub to process, then reload
-    setTimeout(()=>loadDir(),1500);
-    alert('Puzzle removed. The directory will refresh.');
-  }catch(e){
-    alert('Could not remove puzzle: '+e.message);
-  }
+  if(!confirm('Remove "'+title+'" from the directory?\nThis cannot be undone.'))return;
+  try{await cloudRemovePuzzle(id);setTimeout(()=>loadDir(),800);}
+  catch(e){alert('Could not remove: '+e.message);}
 }
 
-// ── Solver ─────────────────────────────────────────────────────────────────────
 let sWords=[],sActive=null,sCurZoom=1;
-
 async function openSolver(id){
   document.getElementById('solver-title').textContent='Loading…';
   document.getElementById('solver-overlay').classList.add('open');
@@ -269,20 +244,13 @@ async function openSolver(id){
     buildSolverGrid(entry.data);
     setTimeout(()=>{sZoomFit();fitSolverText();},80);
   }catch(e){
-    document.getElementById('s-grid').innerHTML=`<tr><td style="padding:24px;color:#c00">Could not load puzzle: ${escHtml(e.message)}</td></tr>`;
+    document.getElementById('s-grid').innerHTML=`<tr><td style="padding:24px;color:#c00">Could not load: ${escHtml(e.message)}</td></tr>`;
   }
 }
-
-function closeSolver(){
-  document.getElementById('solver-overlay').classList.remove('open');
-  document.body.style.overflow='';
-  history.replaceState(null,'','directory.html');
-  sActive=null;
-}
+function closeSolver(){document.getElementById('solver-overlay').classList.remove('open');document.body.style.overflow='';history.replaceState(null,'','directory.html');sActive=null;}
 
 function buildSolverGrid(data){
-  const rows=data.rows,cols=data.cols;
-  const cSz=data.cellSizePx||64,tSz=data.textSizePx||12;
+  const rows=data.rows,cols=data.cols,cSz=data.cellSizePx||64,tSz=data.textSizePx||12;
   const arSz=Math.max(10,Math.round(cSz*0.24));
   sWords=[];sActive=null;
   const G2=[];
@@ -294,10 +262,7 @@ function buildSolverGrid(data){
       cell.clues.forEach((cl,ci)=>{
         const wcells=getWordCells(cl.dir,cl.ans,cell.r,cell.c).filter(([ar,ac])=>ar>=0&&ar<rows&&ac>=0&&ac<cols);
         sWords.push({or:cell.r,oc:cell.c,ci,cells:wcells,ans:cl.ans});
-        wcells.forEach(([ar,ac],i)=>{
-          if(G2[ar][ac].t==='answer')G2[ar][ac].letter2=cl.ans[i];
-          else G2[ar][ac]={t:'answer',clues:[],answerOf:{letter:cl.ans[i]}};
-        });
+        wcells.forEach(([ar,ac],i)=>{if(G2[ar][ac].t==='answer')G2[ar][ac].letter2=cl.ans[i];else G2[ar][ac]={t:'answer',clues:[],answerOf:{letter:cl.ans[i]}};});
       });
     }
   });
@@ -306,8 +271,7 @@ function buildSolverGrid(data){
   for(let r=0;r<rows;r++){
     const tr=document.createElement('tr');
     for(let c=0;c<cols;c++){
-      const cell=G2[r][c];
-      const td=document.createElement('td');td.setAttribute('style',sz);
+      const cell=G2[r][c],td=document.createElement('td');td.setAttribute('style',sz);
       if(cell.t==='black'){td.className='t-black';}
       else if(cell.t==='clue'){
         td.className='t-clue';
@@ -315,27 +279,21 @@ function buildSolverGrid(data){
         const isMulti=cell.clues.length>1;
         cell.clues.forEach((cl,idx)=>{
           if(idx>0){const dv=document.createElement('div');dv.className='clue-divider';inner.appendChild(dv);}
-          const slot=document.createElement('div');
-          slot.className='clue-slot '+eAPC(cl.dir,isMulti);
+          const slot=document.createElement('div');slot.className='clue-slot '+eAPC(cl.dir,isMulti);
           slot.dataset.or=r;slot.dataset.oc=c;slot.dataset.ci=idx;
           const fs=cl.textSize&&cl.textSize>0?cl.textSize:tSz;
           slot.style.flex=fs+' 1 0';
           slot.innerHTML=`<div class="slot-text" style="font-size:${fs}px">${escHtml(cl.clue||'?')}</div><div class="slot-arrow">${arrowSVG(cl.dir,arSz)}</div>`;
-          slot.addEventListener('click',()=>sPickClue(parseInt(slot.dataset.or),parseInt(slot.dataset.oc),parseInt(slot.dataset.ci)));
+          slot.addEventListener('click',()=>sPickClue(+slot.dataset.or,+slot.dataset.oc,+slot.dataset.ci));
           inner.appendChild(slot);
         });
         td.appendChild(inner);
       }else if(cell.t==='answer'){
         td.className='t-answer';
-        const inp=document.createElement('input');
-        inp.className='solve-input';inp.type='text';inp.maxLength=1;
-        inp.dataset.r=r;inp.dataset.c=c;
-        inp.style.fontSize=Math.round(cSz*0.38)+'px';
-        inp.setAttribute('autocapitalize','characters');inp.setAttribute('autocomplete','off');
-        inp.setAttribute('autocorrect','off');inp.setAttribute('spellcheck','false');
-        inp.addEventListener('input',sSolveInput);
-        inp.addEventListener('keydown',sSolveKeydown);
-        inp.addEventListener('focus',sSolveFocus);
+        const inp=document.createElement('input');inp.className='solve-input';inp.type='text';inp.maxLength=1;
+        inp.dataset.r=r;inp.dataset.c=c;inp.style.fontSize=Math.round(cSz*0.38)+'px';
+        inp.setAttribute('autocapitalize','characters');inp.setAttribute('autocomplete','off');inp.setAttribute('autocorrect','off');inp.setAttribute('spellcheck','false');
+        inp.addEventListener('input',sSolveInput);inp.addEventListener('keydown',sSolveKeydown);inp.addEventListener('focus',sSolveFocus);
         td.appendChild(inp);
       }else{td.className='t-empty';}
       tr.appendChild(td);
@@ -343,15 +301,7 @@ function buildSolverGrid(data){
     tbl.appendChild(tr);
   }
 }
-
-function fitSolverText(){
-  document.querySelectorAll('#s-grid .clue-slot').forEach(slot=>{
-    const t=slot.querySelector('.slot-text');if(!t)return;
-    let fs=parseFloat(t.style.fontSize)||10;let s=40;
-    while(s-->0&&fs>4&&(slot.scrollWidth>slot.clientWidth+1||slot.scrollHeight>slot.clientHeight+1)){fs-=0.5;t.style.fontSize=fs+'px';}
-  });
-}
-
+function fitSolverText(){document.querySelectorAll('#s-grid .clue-slot').forEach(slot=>{const t=slot.querySelector('.slot-text');if(!t)return;let fs=parseFloat(t.style.fontSize)||10,s=40;while(s-->0&&fs>4&&(slot.scrollWidth>slot.clientWidth+1||slot.scrollHeight>slot.clientHeight+1)){fs-=0.5;t.style.fontSize=fs+'px';}});}
 function sGetInp(r,c){return document.querySelector('#s-grid input.solve-input[data-r="'+r+'"][data-c="'+c+'"]');}
 function sPickClue(or,oc,ci){const w=sWords.find(x=>x.or===or&&x.oc===oc&&x.ci===ci);if(!w)return;sActive={or,oc,ci,cells:w.cells,ans:w.ans,idx:0};sHighlight();const inp=sGetInp(w.cells[0][0],w.cells[0][1]);if(inp){inp.focus();inp.select();}}
 function sHighlight(){
@@ -364,15 +314,13 @@ function sHighlight(){
 }
 function sSolveFocus(e){
   const inp=e.target;inp.classList.remove('wrong');
-  const r=parseInt(inp.dataset.r),c=parseInt(inp.dataset.c);
+  const r=+inp.dataset.r,c=+inp.dataset.c;
   if(sActive){const i=sActive.cells.findIndex(([a,b])=>a===r&&b===c);if(i>=0){sActive.idx=i;sHighlight();return;}}
   const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));
   if(w){sActive={or:w.or,oc:w.oc,ci:w.ci,cells:w.cells,ans:w.ans,idx:w.cells.findIndex(([a,b])=>a===r&&b===c)};if(sActive.idx<0)sActive.idx=0;sHighlight();}
 }
 function sSolveInput(e){
-  const inp=e.target;
-  inp.value=(inp.value||'').slice(-1).toUpperCase().replace(/[^A-Z]/,'');
-  inp.classList.remove('wrong');
+  const inp=e.target;inp.value=(inp.value||'').slice(-1).toUpperCase().replace(/[^A-Z]/,'');inp.classList.remove('wrong');
   if(inp.value&&sActive){const next=sActive.idx+1;if(next<sActive.cells.length){sActive.idx=next;const[nr,nc]=sActive.cells[next];const ni=sGetInp(nr,nc);if(ni){ni.focus();ni.select();}}else sHighlight();}
   sMaybeCelebrate();
 }
@@ -383,29 +331,15 @@ function sSolveKeydown(e){
   else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){if(sActive&&sActive.idx>0){e.preventDefault();sActive.idx--;const[pr,pc]=sActive.cells[sActive.idx];const pi=sGetInp(pr,pc);if(pi){pi.focus();pi.select();}}}
 }
 function sMaybeCelebrate(){
-  const inputs=document.querySelectorAll('#s-grid td.t-answer input');
-  if(!inputs.length)return;
-  for(let i=0;i<inputs.length;i++){
-    const r=parseInt(inputs[i].dataset.r),c=parseInt(inputs[i].dataset.c);
-    const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));if(!w)return;
-    const idx=w.cells.findIndex(([a,b])=>a===r&&b===c);
-    if((inputs[i].value||'').toUpperCase()!==w.ans[idx])return;
-  }
+  const inputs=document.querySelectorAll('#s-grid td.t-answer input');if(!inputs.length)return;
+  for(let i=0;i<inputs.length;i++){const r=+inputs[i].dataset.r,c=+inputs[i].dataset.c;const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));if(!w)return;const idx=w.cells.findIndex(([a,b])=>a===r&&b===c);if((inputs[i].value||'').toUpperCase()!==w.ans[idx])return;}
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
-  sActive=null;sHighlight();
-  document.getElementById('celebrate').style.display='flex';
+  sActive=null;sHighlight();document.getElementById('celebrate').style.display='flex';
 }
 function solverCheck(){
   let wrong=0,filled=0;
-  document.querySelectorAll('#s-grid td.t-answer input').forEach(inp=>{
-    const r=parseInt(inp.dataset.r),c=parseInt(inp.dataset.c);
-    const got=(inp.value||'').toUpperCase();if(!got){inp.classList.remove('wrong');return;}filled++;
-    const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));if(!w)return;
-    const idx=w.cells.findIndex(([a,b])=>a===r&&b===c);
-    if(got!==w.ans[idx]){inp.classList.add('wrong');wrong++;}else inp.classList.remove('wrong');
-  });
-  if(!filled)alert('No letters typed yet.');
-  else alert(`${filled-wrong} correct, ${wrong} wrong (out of ${filled} typed).`);
+  document.querySelectorAll('#s-grid td.t-answer input').forEach(inp=>{const r=+inp.dataset.r,c=+inp.dataset.c;const got=(inp.value||'').toUpperCase();if(!got){inp.classList.remove('wrong');return;}filled++;const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));if(!w)return;const idx=w.cells.findIndex(([a,b])=>a===r&&b===c);if(got!==w.ans[idx]){inp.classList.add('wrong');wrong++;}else inp.classList.remove('wrong');});
+  if(!filled)alert('No letters typed yet.');else alert(`${filled-wrong} correct, ${wrong} wrong (out of ${filled} typed).`);
 }
 function solverReveal(){if(!confirm('Reveal all answers?'))return;sWords.forEach(w=>{w.cells.forEach(([r,c],i)=>{const inp=sGetInp(r,c);if(inp){inp.value=w.ans[i];inp.classList.remove('wrong');}});});}
 function solverClear(){if(!confirm('Clear all your answers?'))return;document.querySelectorAll('#s-grid .solve-input').forEach(i=>{i.value='';i.classList.remove('wrong');});sActive=null;sHighlight();}
@@ -414,7 +348,6 @@ function sSetZoom(z){sCurZoom=Math.max(0.25,Math.min(3,z));sApplyZoom();}
 function sZoomBy(d){sSetZoom(sCurZoom+d);}
 function sZoomFit(){const wrap=document.getElementById('s-grid-wrap');const tbl=document.getElementById('s-grid');if(!wrap||!tbl||!tbl.offsetWidth)return;sSetZoom(Math.min(1,(wrap.clientWidth-20)/tbl.offsetWidth));}
 
-// ── Init ───────────────────────────────────────────────────────────────────────
 loadDir();
 (function(){const id=new URLSearchParams(location.search).get('id');if(id)setTimeout(()=>openSolver(id),300);})();
 </script>
