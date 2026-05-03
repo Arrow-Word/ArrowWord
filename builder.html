@@ -2096,7 +2096,7 @@ async function publishToWeb(overrideName){
   try{
     await cloudPublishPuzzle(name,gridToData());
     if(btn){btn.textContent=origText;btn.disabled=false;}
-    if(confirm('✓ "'+name+'" is now live!\n\nOpen the directory?'))window.open('directory.html','_blank');
+    alert('✓ "'+name+'" published! It will appear in the directory within 1-2 minutes.');
   }catch(e){
     if(btn){btn.textContent=origText;btn.disabled=false;}
     alert('Could not publish: '+e.message+'\n\nMake sure cloud-storage.js has your JSONBin credentials.');
@@ -2112,7 +2112,7 @@ async function publishSavedToWeb(i){
   try{
     await cloudPublishPuzzle(p.name,p.data);
     if(btn){btn.textContent=origText;btn.disabled=false;}
-    if(confirm('✓ "'+p.name+'" is now live!\n\nOpen the directory?'))window.open('directory.html','_blank');
+    alert('✓ "'+p.name+'" published! It will appear in the directory within 1-2 minutes.');
   }catch(e){
     if(btn){btn.textContent=origText;btn.disabled=false;}
     alert('Could not publish: '+e.message);
