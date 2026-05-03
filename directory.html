@@ -253,7 +253,6 @@ async function loadDir() {
   document.getElementById('size-tabs').innerHTML = '';
   try {
     allPuzzles = await cloudGetPuzzles();
-    cloudShowCredentialWarning('#cred-warn-area');
     buildSizeTabs();
     renderDir();
   } catch(e) {
