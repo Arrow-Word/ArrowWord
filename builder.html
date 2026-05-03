@@ -3,28 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
-<title>Puzzle Builder — Arrow Word Puzzles</title>
-<!-- Arrow Word Puzzle Builder v15
-     Changelog:
-     v15 - Switched publish-to-web from GitHub API to JSONBin.io cloud storage.
-           Anyone (including Mom) can now publish puzzles without a token or login.
-           Fixed SHA mismatch error that prevented publishing in v14.
-           Added cloud-storage.js as shared storage layer.
-     v14 - Split into multi-page site (index/builder/directory).
-           Added publish-to-web via GitHub API (now replaced in v15).
-     v13 - Added zoom controls and mobile improvements.
-     v12 - Added celebration on puzzle completion.
-     v11 - Added per-clue text size control.
-     v10 - Added drag-to-reorder clues in modal.
-     v9  - Added edit existing clue button.
-     v8  - Added confirm dialogs before deleting clues or new grid.
-     v7  - Fixed left/up direction word placement (reading order).
-     v6  - Added crossing letter conflict detection.
-     v5  - Added multiple clues per cell with divider line.
-     v4  - Added all 12 arrow directions including corners.
-     v3  - Auto-place answer letters in grid on clue entry.
-     v2  - Added visual direction picker with bent SVG arrows.
+<title>Puzzle Builder v16 — Arrow Word Puzzles</title>
+<!-- Arrow Word Puzzle Builder
+     ════════════════════════════════════════════════
+     CURRENT VERSION: v16
+     ════════════════════════════════════════════════
+     CHANGELOG:
+     v16 - Redesigned site structure: new solver-focused home page,
+           about-builder page, delete-puzzles page (password protected).
+           Removed delete buttons from directory cards.
+           Added size grouping tabs in directory (5×5, 9×9 etc).
+           Removed duplicate "Publish a puzzle" section from builder.
+           Moved Import button to Library section.
+           Builder page password protected.
+           Version number and changelog now always kept up to date.
+     v15 - Switched publish-to-web from GitHub API to JSONBin.io cloud
+           storage. Anyone (including Mom) can now publish without a token.
+           Fixed SHA mismatch error that blocked publishing in v14.
+     v14 - Split into multi-page site: index, builder, directory pages.
+           Added navbar across all pages.
+           Added Publish to web directory button (🌐).
+     v13 - Added zoom controls and mobile pinch-to-zoom in solve view.
+     v12 - Added celebration animation on puzzle completion.
+     v11 - Added per-clue individual text size control.
+     v10 - Added drag-to-reorder clues within a cell (modal list).
+     v9  - Added Edit button for existing clues (previously delete-only).
+     v8  - Added confirm dialogs before deleting clues or resetting grid.
+     v7  - Fixed left/up direction word placement to always read L→R, T→B.
+     v6  - Added crossing letter conflict detection (allows matches, blocks
+           mismatches).
+     v5  - Added multiple clues per cell with purple divider line.
+     v4  - Added all 12 arrow directions including 8 corner combinations.
+     v3  - Auto-place answer letters in grid immediately on clue entry.
+     v2  - Replaced dropdown with visual direction picker (bent SVG arrows).
      v1  - Initial arrow word puzzle builder.
+     ════════════════════════════════════════════════
 -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -143,15 +156,51 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
 </style>
 </head>
 <body>
+<!-- Password protection for builder -->
+<div id="builder-lock" style="display:none;position:fixed;inset:0;background:#f5f0ff;z-index:9999;align-items:center;justify-content:center;padding:24px">
+  <div style="background:#fff;border-radius:12px;border:1px solid #e0d8f0;padding:32px;width:360px;max-width:95vw;text-align:center;box-shadow:0 4px 24px rgba(119,68,187,0.12)">
+    <div style="font-size:40px;margin-bottom:12px">🔒</div>
+    <h2 style="font-size:20px;font-weight:700;color:#443366;margin-bottom:8px">Puzzle Builder</h2>
+    <p style="font-size:13px;color:#888;margin-bottom:20px;line-height:1.5">Enter the password to access the builder.</p>
+    <input type="password" id="builder-pwd" placeholder="Password"
+      style="width:100%;padding:10px 14px;font-size:15px;border:1px solid #bbb;border-radius:6px;margin-bottom:10px;text-align:center;letter-spacing:2px"
+      onkeydown="if(event.key==='Enter')checkBuilderPwd()">
+    <button onclick="checkBuilderPwd()" style="width:100%;background:#7744bb;color:#fff;border:none;border-radius:6px;padding:12px;font-size:15px;font-weight:600;cursor:pointer">Enter</button>
+    <div id="builder-pwd-err" style="color:#dc3545;font-size:13px;margin-top:8px;min-height:18px"></div>
+    <p style="font-size:12px;color:#bbb;margin-top:12px"><a href="index.html" style="color:#9966cc;text-decoration:none">← Back to home</a></p>
+  </div>
+</div>
 <nav style="background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
   <a style="font-size:18px;font-weight:700;text-decoration:none;color:#fff" href="index.html">Arrow<span style="color:#e8d8ff">Word</span></a>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
     <a style="color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="index.html">Home</a>
     <a style="color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="directory.html">Puzzles</a>
     <a style="background:rgba(255,255,255,0.2);color:#fff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="builder.html">Builder</a>
+    <span style="color:#e8d8ff;font-size:12px;opacity:0.7">v16</span>
   </div>
 </nav>
 <script src="cloud-storage.js"></script>
+<script>
+// Builder password — change this to whatever you like
+const BUILDER_PASSWORD = 'arrowword2024';
+const BUILDER_UNLOCK_KEY = 'builder_unlocked_v16';
+function checkBuilderPwd(){
+  const val=document.getElementById('builder-pwd').value;
+  if(val===BUILDER_PASSWORD){
+    sessionStorage.setItem(BUILDER_UNLOCK_KEY,'1');
+    document.getElementById('builder-lock').style.display='none';
+    document.getElementById('builder-pwd').value='';
+  } else {
+    document.getElementById('builder-pwd-err').textContent='Incorrect password.';
+    document.getElementById('builder-pwd').value='';
+    document.getElementById('builder-pwd').focus();
+  }
+}
+// Show lock if not already unlocked this session
+if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){
+  document.getElementById('builder-lock').style.display='flex';
+}
+</script>
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
@@ -233,7 +282,6 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
 <!-- SOLVE TAB -->
 <div id="tab-solve" class="panel">
   <div class="toolbar no-print">
-    <button class="tool-btn green" onclick="publishCurrentPuzzle()">📤 Publish puzzle (send to friends)</button>
     <button class="tool-btn" style="background:#ede0ff;color:#443366;border-color:#9966cc;font-weight:600" onclick="publishToWeb()">🌐 Publish to web</button>
     <!-- v14: Save progress moved to top, made green; Print blank puzzle is now
          a plain white button so the green save action stands out. -->
@@ -264,13 +312,10 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
     <div id="saved-list"><em style="font-size:12px;color:#999">No saved puzzles yet.</em></div>
   </div>
   <div class="save-section">
-    <h3>Publish a puzzle (share with friends)</h3>
-    <div class="info" style="margin-bottom:10px">Publishing creates a single file you can email or message to anyone. They just open it in their browser — no app, no internet needed. They get only the solving view (no editing). Works on phones too.</div>
+    <h3>🌐 Publish to web directory</h3>
+    <div class="info" style="margin-bottom:10px">Publish the current puzzle to the live web directory so anyone can find and solve it online.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="tool-btn green" onclick="publishCurrentPuzzle()">📤 Publish current puzzle (send to friends)</button>
-      <button class="tool-btn" style="background:#ede0ff;color:#443366;border-color:#9966cc;font-weight:600" onclick="publishToWeb()">🌐 Publish to web directory</button>
-      <button class="tool-btn" onclick="document.getElementById('import-file').click()">Import puzzle from file</button>
-      <input type="file" id="import-file" accept=".html,.json" style="display:none" onchange="importPuzzle(event)">
+      <button class="tool-btn" style="background:#ede0ff;color:#443366;border-color:#9966cc;font-weight:600" onclick="publishToWeb()">🌐 Publish current puzzle to web</button>
     </div>
   </div>
   <div class="save-section">
@@ -279,7 +324,9 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="tool-btn green" onclick="exportLibrary()">⬇️ Export entire library</button>
       <button class="tool-btn" onclick="document.getElementById('import-library-file').click()">⬆️ Import library</button>
+      <button class="tool-btn" onclick="document.getElementById('import-file').click()">📥 Import puzzle from file</button>
       <input type="file" id="import-library-file" accept=".json" style="display:none" onchange="importLibrary(event)">
+      <input type="file" id="import-file" accept=".html,.json" style="display:none" onchange="importPuzzle(event)">
       <span id="library-count" style="font-size:12px;color:#888"></span>
     </div>
   </div>
@@ -2025,44 +2072,44 @@ document.querySelectorAll('.modal-bg').forEach(function(m){
   m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});
 });
 
-// ── Publish to web directory (JSONBin cloud — anyone can use) ─────────────────
-async function publishToWeb(overrideName) {
-  const name = overrideName || (document.getElementById('puzzle-name').value || '').trim();
-  if (!name) { alert('Please give your puzzle a name first.\n\nType a name in the "Puzzle name" field on the Save & Load tab.'); return; }
-  const hasContent = G.some(row => row.some(cell => cell.t !== 'empty'));
-  if (!hasContent) { alert('The puzzle is empty — add some clues first.'); return; }
-  if (!confirm('Publish "' + name + '" to the web directory?\n\nAnyone visiting the site will be able to solve it.')) return;
-  const btn = event && event.target;
-  const origText = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '⏳ Publishing…'; btn.disabled = true; }
-  try {
-    await cloudPublishPuzzle(name, gridToData());
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-    if (confirm('✓ "' + name + '" is now live in the puzzle directory!\n\nOpen the directory to see it?')) {
-      window.open('directory.html', '_blank');
+// ── Publish to web directory (JSONBin cloud) ──────────────────────────────────
+async function publishToWeb(overrideName){
+  const name=overrideName||(document.getElementById('puzzle-name').value||'').trim();
+  if(!name){alert('Please give your puzzle a name first.\n\nType a name in the "Puzzle name" field on the Save & Load tab.');return;}
+  const hasContent=G.some(row=>row.some(cell=>cell.t!=='empty'));
+  if(!hasContent){alert('The puzzle is empty — add some clues first.');return;}
+  if(!confirm('Publish "'+name+'" to the web directory?\n\nAnyone visiting the site will be able to solve it.'))return;
+  const btn=event&&event.target;
+  const origText=btn?btn.textContent:'';
+  if(btn){btn.textContent='⏳ Publishing…';btn.disabled=true;}
+  try{
+    await cloudPublishPuzzle(name,gridToData());
+    if(btn){btn.textContent=origText;btn.disabled=false;}
+    if(confirm('✓ "'+name+'" is now live in the puzzle directory!\n\nOpen the directory to see it?')){
+      window.open('directory.html','_blank');
     }
-  } catch(e) {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-    alert('Could not publish: ' + e.message + '\n\nMake sure cloud-storage.js has your JSONBin credentials.');
+  }catch(e){
+    if(btn){btn.textContent=origText;btn.disabled=false;}
+    alert('Could not publish: '+e.message+'\n\nMake sure cloud-storage.js has your JSONBin credentials.');
   }
 }
 
-async function publishSavedToWeb(i) {
-  const list = getSaved(); if (!list[i]) return;
-  const p = list[i];
-  if (!confirm('Publish "' + p.name + '" to the web directory?')) return;
-  const btn = event && event.target;
-  const origText = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '⏳…'; btn.disabled = true; }
-  try {
-    await cloudPublishPuzzle(p.name, p.data);
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-    if (confirm('✓ "' + p.name + '" is now live!\n\nOpen the directory?')) {
-      window.open('directory.html', '_blank');
+async function publishSavedToWeb(i){
+  const list=getSaved();if(!list[i])return;
+  const p=list[i];
+  if(!confirm('Publish "'+p.name+'" to the web directory?'))return;
+  const btn=event&&event.target;
+  const origText=btn?btn.textContent:'';
+  if(btn){btn.textContent='⏳…';btn.disabled=true;}
+  try{
+    await cloudPublishPuzzle(p.name,p.data);
+    if(btn){btn.textContent=origText;btn.disabled=false;}
+    if(confirm('✓ "'+p.name+'" is now live!\n\nOpen the directory?')){
+      window.open('directory.html','_blank');
     }
-  } catch(e) {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-    alert('Could not publish: ' + e.message);
+  }catch(e){
+    if(btn){btn.textContent=origText;btn.disabled=false;}
+    alert('Could not publish: '+e.message);
   }
 }
 

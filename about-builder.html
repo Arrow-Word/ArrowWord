@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Build Your Own Puzzles — Arrow Word Puzzle Builder</title>
+<!-- Arrow Word Puzzles v16 - Builder promo / about page -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f5f0ff;color:#222;min-height:100vh}
+nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.nav-brand{font-size:20px;font-weight:700;text-decoration:none;color:#fff}
+.nav-brand span{color:#e8d8ff}
+.nav-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.nav-links a{color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500;transition:background .15s}
+.nav-links a:hover{background:rgba(255,255,255,0.15)}
+.nav-links a.active{background:rgba(255,255,255,0.22);color:#fff}
+.hero{background:linear-gradient(135deg,#7744bb 0%,#9955cc 50%,#6633aa 100%);color:#fff;text-align:center;padding:72px 24px 80px}
+.hero h1{font-size:clamp(28px,6vw,54px);font-weight:700;margin-bottom:16px;line-height:1.1}
+.hero h1 span{color:#e8d8ff}
+.hero p{font-size:clamp(15px,2.5vw,20px);color:#d8c8f8;max-width:580px;margin:0 auto 32px;line-height:1.6}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-block;padding:14px 28px;border-radius:8px;font-size:16px;font-weight:600;text-decoration:none;cursor:pointer;border:none;transition:transform .12s,box-shadow .12s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.2)}
+.btn-primary{background:#fff;color:#7744bb}
+.btn-secondary{background:rgba(255,255,255,0.15);color:#fff;border:2px solid rgba(255,255,255,0.4)}
+.btn-secondary:hover{background:rgba(255,255,255,0.25)}
+.features{padding:64px 24px;background:#fff}
+.section-title{text-align:center;font-size:clamp(22px,4vw,32px);font-weight:700;color:#443366;margin-bottom:8px}
+.section-sub{text-align:center;font-size:15px;color:#777;margin-bottom:48px}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:960px;margin:0 auto}
+.feature-card{background:#f9f7ff;border:1px solid #e8e0f0;border-radius:12px;padding:24px;text-align:center}
+.feature-icon{font-size:36px;margin-bottom:12px}
+.feature-card h3{font-size:16px;font-weight:700;color:#443366;margin-bottom:8px}
+.feature-card p{font-size:13px;color:#666;line-height:1.6}
+.cta{background:#7744bb;color:#fff;text-align:center;padding:64px 24px}
+.cta h2{font-size:clamp(22px,4vw,32px);font-weight:700;margin-bottom:12px}
+.cta p{font-size:15px;color:#d8c8f8;margin-bottom:28px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.6}
+.access-note{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:16px 20px;max-width:560px;margin:0 auto 32px;font-size:14px;color:#664d03;line-height:1.6;text-align:left}
+.access-note strong{color:#443300}
+footer{background:#2a1a44;color:#9980cc;text-align:center;padding:20px;font-size:12px}
+footer a{color:#b8a0e8;text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-brand" href="index.html">Arrow<span>Word</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="directory.html">Puzzles</a>
+    <a href="about-builder.html" class="active">Build your own</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1>Build Your Own<br><span>Arrow Word Puzzles</span></h1>
+  <p>Our browser-based builder makes it easy to design arrow word puzzles — and publish them for the world to solve.</p>
+  <div class="hero-btns">
+    <a href="builder.html" class="btn btn-primary">✏️ Open the builder</a>
+    <a href="directory.html" class="btn btn-secondary">📖 See published puzzles</a>
+  </div>
+</section>
+
+<section class="features">
+  <div class="section-title">Everything you need to build</div>
+  <div class="section-sub">A complete arrow word puzzle builder in your browser — no software to install</div>
+  <div class="features-grid">
+    <div class="feature-card"><div class="feature-icon">✏️</div><h3>Easy grid designer</h3><p>Click cells to add clues and answers. 12 arrow directions, multiple clues per cell, drag to reorder.</p></div>
+    <div class="feature-card"><div class="feature-icon">🌐</div><h3>Publish to the web</h3><p>One click to publish a finished puzzle to the public directory. Anyone in the world can solve it instantly.</p></div>
+    <div class="feature-card"><div class="feature-icon">📱</div><h3>Works on mobile</h3><p>Build and publish from your phone or tablet. Add to your home screen for a real app feel.</p></div>
+    <div class="feature-card"><div class="feature-icon">💾</div><h3>Auto-saves your work</h3><p>Puzzles save in your browser automatically. Export a backup library any time so you never lose your work.</p></div>
+    <div class="feature-card"><div class="feature-icon">🖨️</div><h3>Print ready</h3><p>Every puzzle has a clean print view — a blank grid ready for solving on paper.</p></div>
+    <div class="feature-card"><div class="feature-icon">🎉</div><h3>Celebration!</h3><p>Solvers who complete a puzzle correctly get a celebration message. A nice touch.</p></div>
+  </div>
+</section>
+
+<section class="cta">
+  <h2>Ready to start building?</h2>
+  <p>It only takes a few minutes to create your first puzzle. Click a cell, type your clue and answer, pick a direction — done.</p>
+  <div class="access-note">
+    <strong>🔒 Builder access:</strong> The builder is currently by invitation only.
+    If you have been given access, click the button below and log in when prompted.
+    If you'd like to request access, contact us.
+  </div>
+  <a href="builder.html" class="btn btn-primary">Open the builder →</a>
+</section>
+
+<footer>
+  <p>Arrow Word Puzzles &nbsp;·&nbsp; <a href="index.html">Home</a> &nbsp;·&nbsp; <a href="directory.html">Puzzles</a> &nbsp;·&nbsp; v16</p>
+</footer>
+</body>
+</html>

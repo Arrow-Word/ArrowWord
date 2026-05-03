@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delete Puzzles — Arrow Word Puzzles</title>
+<!-- Arrow Word Puzzles v16 - Password protected delete page -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f5f0ff;color:#222;min-height:100vh}
+nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.nav-brand{font-size:20px;font-weight:700;text-decoration:none;color:#fff}
+.nav-brand span{color:#e8d8ff}
+.nav-links a{color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500}
+.nav-links a:hover{background:rgba(255,255,255,0.15)}
+/* Lock screen */
+#lock-screen{position:fixed;inset:0;background:#f5f0ff;z-index:500;display:flex;align-items:center;justify-content:center;padding:24px}
+.lock-box{background:#fff;border-radius:12px;border:1px solid #e0d8f0;padding:32px;width:360px;max-width:95vw;text-align:center;box-shadow:0 4px 24px rgba(119,68,187,0.12)}
+.lock-box h2{font-size:20px;font-weight:700;color:#443366;margin-bottom:8px}
+.lock-box p{font-size:13px;color:#888;margin-bottom:20px;line-height:1.5}
+.lock-box input{width:100%;padding:10px 14px;font-size:15px;border:1px solid #bbb;border-radius:6px;margin-bottom:10px;text-align:center;letter-spacing:2px}
+.lock-box input:focus{outline:none;border-color:#7744bb}
+.lock-btn{width:100%;background:#7744bb;color:#fff;border:none;border-radius:6px;padding:12px;font-size:15px;font-weight:600;cursor:pointer}
+.lock-btn:hover{background:#6633aa}
+.lock-error{color:#dc3545;font-size:13px;margin-top:8px;min-height:18px}
+/* Main content */
+#main-content{display:none;max-width:800px;margin:0 auto;padding:24px}
+.page-title{font-size:22px;font-weight:700;color:#443366;margin-bottom:4px}
+.page-sub{font-size:13px;color:#888;margin-bottom:24px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+.select-all-wrap{display:flex;align-items:center;gap:6px;font-size:13px;color:#555;cursor:pointer}
+.btn-del-selected{background:#dc3545;color:#fff;border:none;border-radius:6px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-del-selected:hover{background:#bb2d3b}
+.btn-del-selected:disabled{opacity:.4;cursor:default}
+.btn-back{background:#fff;color:#443366;border:1px solid #ccc;border-radius:6px;padding:9px 16px;font-size:13px;cursor:pointer;text-decoration:none;display:inline-block}
+.btn-back:hover{background:#f0ecff}
+.puzzle-list{display:flex;flex-direction:column;gap:10px}
+.prow{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e0d8f0;border-radius:8px;padding:14px 16px;transition:background .12s}
+.prow:hover{background:#fdf9ff}
+.prow.checked{background:#fff0f0;border-color:#f4a8a8}
+.prow input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:#dc3545;flex-shrink:0}
+.prow-info{flex:1;min-width:0}
+.prow-title{font-size:14px;font-weight:700;color:#443366;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow-meta{font-size:11px;color:#aaa;margin-top:2px}
+.prow-size{font-size:11px;color:#888;background:#f0ecff;display:inline-block;padding:1px 8px;border-radius:4px;margin-left:6px}
+.btn-del-one{background:#fff;border:1px solid #f4a8a8;color:#dc3545;border-radius:5px;padding:6px 12px;font-size:12px;cursor:pointer;flex-shrink:0}
+.btn-del-one:hover{background:#fdd}
+.empty{text-align:center;padding:48px;color:#aaa;font-style:italic}
+.loading{text-align:center;padding:48px;color:#aaa;font-style:italic}
+.count{font-size:12px;color:#999;margin-bottom:12px}
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-brand" href="index.html">Arrow<span>Word</span></a>
+  <div class="nav-links">
+    <a href="directory.html">← Back to puzzles</a>
+  </div>
+</nav>
+
+<!-- Lock screen -->
+<div id="lock-screen">
+  <div class="lock-box">
+    <div style="font-size:40px;margin-bottom:12px">🔒</div>
+    <h2>Delete Puzzles</h2>
+    <p>This area is restricted. Enter the password to continue.</p>
+    <input type="password" id="pwd-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPwd()">
+    <button class="lock-btn" onclick="checkPwd()">Unlock</button>
+    <div class="lock-error" id="lock-error"></div>
+  </div>
+</div>
+
+<!-- Main content (shown after unlock) -->
+<div id="main-content">
+  <div class="page-title">🗑 Delete Puzzles</div>
+  <div class="page-sub">Select puzzles to delete from the web directory. This cannot be undone.</div>
+  <div class="toolbar">
+    <a href="directory.html" class="btn-back">← Back to directory</a>
+    <label class="select-all-wrap">
+      <input type="checkbox" id="select-all" onchange="toggleAll(this.checked)"> Select all
+    </label>
+    <button class="btn-del-selected" id="btn-del-sel" disabled onclick="deleteSelected()">🗑 Delete selected (<span id="sel-count">0</span>)</button>
+  </div>
+  <div class="count" id="count-line"></div>
+  <div class="puzzle-list" id="puzzle-list"><div class="loading">Loading…</div></div>
+</div>
+
+<script src="cloud-storage.js"></script>
+<script>
+// ── Password ───────────────────────────────────────────────────────────────────
+// Change this password to whatever you like.
+// It's stored here in the JS — it's not Fort Knox but keeps casual visitors out.
+const DELETE_PASSWORD = 'arrowword2024';
+
+function checkPwd(){
+  const val=document.getElementById('pwd-input').value;
+  if(val===DELETE_PASSWORD){
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('main-content').style.display='block';
+    loadPuzzles();
+  } else {
+    document.getElementById('lock-error').textContent='Incorrect password. Try again.';
+    document.getElementById('pwd-input').value='';
+    document.getElementById('pwd-input').focus();
+  }
+}
+
+// ── Puzzle list ────────────────────────────────────────────────────────────────
+let puzzles=[];
+
+async function loadPuzzles(){
+  const list=document.getElementById('puzzle-list');
+  list.innerHTML='<div class="loading">Loading puzzles…</div>';
+  try{
+    puzzles=await cloudGetPuzzles();
+    renderList();
+  }catch(e){
+    list.innerHTML='<div class="loading" style="color:#c00">Could not load puzzles: '+e.message+'</div>';
+  }
+}
+
+function renderList(){
+  document.getElementById('count-line').textContent=puzzles.length+' puzzle'+(puzzles.length===1?'':'s')+' in directory';
+  const list=document.getElementById('puzzle-list');
+  if(!puzzles.length){list.innerHTML='<div class="empty">No puzzles in the directory.</div>';return;}
+  list.innerHTML='';
+  puzzles.forEach(p=>{
+    const row=document.createElement('div');row.className='prow';row.dataset.id=p.id;
+    const size=p.cols&&p.rows?p.cols+'×'+p.rows:'';
+    row.innerHTML=`
+      <input type="checkbox" class="pcheck" data-id="${p.id}" onchange="onCheck()">
+      <div class="prow-info">
+        <div class="prow-title">${escHtml(p.title)}</div>
+        <div class="prow-meta">Published ${p.publishedAt}${size?'<span class="prow-size">'+size+'</span>':''}</div>
+      </div>
+      <button class="btn-del-one" onclick="deleteOne('${p.id}','${escHtml(p.title).replace(/'/g,"\\'")}')">Delete</button>`;
+    row.querySelector('.pcheck').addEventListener('change',function(){row.classList.toggle('checked',this.checked);});
+    list.appendChild(row);
+  });
+  onCheck();
+}
+
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function onCheck(){
+  const checked=document.querySelectorAll('.pcheck:checked').length;
+  document.getElementById('sel-count').textContent=checked;
+  document.getElementById('btn-del-sel').disabled=checked===0;
+  const all=document.querySelectorAll('.pcheck').length;
+  document.getElementById('select-all').indeterminate=checked>0&&checked<all;
+  document.getElementById('select-all').checked=checked===all&&all>0;
+}
+
+function toggleAll(checked){
+  document.querySelectorAll('.pcheck').forEach(cb=>{
+    cb.checked=checked;
+    cb.closest('.prow').classList.toggle('checked',checked);
+  });
+  onCheck();
+}
+
+async function deleteOne(id,title){
+  if(!confirm('Delete "'+title+'" from the directory?\nThis cannot be undone.'))return;
+  try{
+    await cloudRemovePuzzle(id);
+    puzzles=puzzles.filter(p=>p.id!==id);
+    renderList();
+  }catch(e){alert('Could not delete: '+e.message);}
+}
+
+async function deleteSelected(){
+  const checked=[...document.querySelectorAll('.pcheck:checked')].map(cb=>cb.dataset.id);
+  if(!checked.length)return;
+  const names=checked.map(id=>{const p=puzzles.find(x=>x.id===id);return p?'"'+p.title+'"':id;});
+  if(!confirm('Delete '+checked.length+' puzzle'+(checked.length===1?'':'s')+'?\n\n'+names.join('\n')+'\n\nThis cannot be undone.'))return;
+  const btn=document.getElementById('btn-del-sel');
+  btn.textContent='⏳ Deleting…';btn.disabled=true;
+  try{
+    // Delete one by one to keep the cloud state consistent
+    for(const id of checked){
+      await cloudRemovePuzzle(id);
+      puzzles=puzzles.filter(p=>p.id!==id);
+    }
+    renderList();
+    btn.textContent='🗑 Delete selected (0)';
+  }catch(e){
+    alert('Error during deletion: '+e.message+'\n\nSome puzzles may have been deleted. Refresh to see current state.');
+    btn.disabled=false;
+    btn.textContent='🗑 Delete selected';
+    await loadPuzzles();
+  }
+}
+</script>
+</body>
+</html>
