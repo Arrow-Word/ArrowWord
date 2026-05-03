@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puzzle Directory — Arrow Word Puzzles</title>
-<!-- Arrow Word Puzzles v16 -->
+<!-- Arrow Word Puzzles v17 -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;background:#f5f0ff;color:#222;min-height:100vh}
@@ -18,7 +18,6 @@ nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:cen
 .page-header{background:#fff;border-bottom:1px solid #e8e0f0;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .page-header h1{font-size:22px;font-weight:700;color:#443366}
 .page-header p{font-size:13px;color:#888;margin-top:2px}
-.header-btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 main{max-width:1000px;margin:0 auto;padding:24px}
 .dir-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
 .dir-toolbar input{flex:1;min-width:180px;padding:8px 12px;font-size:14px;border:1px solid #ccc;border-radius:6px;background:#fff}
@@ -26,42 +25,45 @@ main{max-width:1000px;margin:0 auto;padding:24px}
 .refresh-btn{padding:8px 14px;font-size:13px;cursor:pointer;border:1px solid #bbb;border-radius:6px;background:#fff}
 .refresh-btn:hover{background:#eee}
 .count-line{font-size:12px;color:#999;margin-bottom:8px}
-
-/* Size group tabs */
 .size-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
-.size-tab{padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #ccc;border-radius:20px;background:#fff;color:#666;transition:all .15s}
+.size-tab{padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #ccc;border-radius:20px;background:#fff;color:#666}
 .size-tab:hover{border-color:#9966cc;color:#7744bb}
 .size-tab.active{background:#7744bb;color:#fff;border-color:#7744bb}
-
 .group-section{margin-bottom:32px}
 .group-title{font-size:15px;font-weight:700;color:#443366;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #e8e0f0;display:flex;align-items:center;gap:8px}
 .group-count{font-size:12px;font-weight:400;color:#aaa;background:#f0ecff;padding:2px 8px;border-radius:10px}
-
 .puzzle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
-.pcard{background:#fff;border:1px solid #e0d8f0;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:8px;transition:box-shadow .15s,transform .12s}
+.pcard{background:#fff;border:1px solid #e0d8f0;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:8px;transition:box-shadow .15s,transform .12s;position:relative}
 .pcard:hover{box-shadow:0 4px 18px rgba(119,68,187,0.15);transform:translateY(-2px)}
 .pcard-title{font-size:15px;font-weight:700;color:#443366;line-height:1.3}
 .pcard-meta{font-size:11px;color:#aaa}
 .pcard-size{font-size:11px;color:#888;background:#f0ecff;display:inline-block;padding:2px 8px;border-radius:4px;align-self:flex-start}
+/* Progress indicators */
+.pcard-badge{position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+.badge-complete{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+.badge-inprogress{background:#fff3cd;color:#856404;border:1px solid #ffc107}
 .btn-solve{width:100%;background:#7744bb;color:#fff;border:none;border-radius:6px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:4px}
 .btn-solve:hover{background:#6633aa}
 .empty-state{text-align:center;padding:64px 24px;color:#999;grid-column:1/-1}
 .empty-icon{font-size:48px;margin-bottom:16px}
 .loading{color:#aaa;font-style:italic;font-size:14px;padding:24px;grid-column:1/-1;text-align:center}
-
 /* Solver overlay */
-#solver-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.62);z-index:200;overflow-y:auto;padding:16px}
-#solver-overlay.open{display:block}
-.solver-box{background:#fff;border-radius:12px;max-width:960px;margin:0 auto;overflow:hidden}
-.solver-header{background:#7744bb;color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+#solver-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.62);z-index:200;overflow-y:auto}
+#solver-overlay.open{display:flex;flex-direction:column}
+.solver-box{background:#fff;flex:1;display:flex;flex-direction:column;max-width:960px;width:100%;margin:16px auto;border-radius:12px;overflow:hidden}
+.solver-header{background:#7744bb;color:#fff;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;flex-shrink:0}
 .solver-header h2{font-size:17px;font-weight:700;margin:0}
 .solver-close{background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:14px;font-weight:600}
 .solver-close:hover{background:rgba(255,255,255,0.35)}
-.solver-body{padding:16px}
-.solve-toolbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-.solve-toolbar button{padding:7px 14px;font-size:13px;cursor:pointer;border:1px solid #bbb;border-radius:5px;background:#fff}
+.solver-body{padding:14px;flex:1;overflow-y:auto}
+/* Solver toolbar — left and right groups */
+.solve-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.solve-toolbar-left{display:flex;gap:6px;flex-wrap:wrap}
+.solve-toolbar-right{display:flex;gap:6px;flex-wrap:wrap}
+.solve-toolbar button{padding:7px 13px;font-size:13px;cursor:pointer;border:1px solid #bbb;border-radius:5px;background:#fff}
 .solve-toolbar button:hover{background:#eee}
 .solve-toolbar button.green{background:#d4f0d4;color:#1a6e1a;border-color:#7bc07b}
+.solve-toolbar button.blue{background:#d0e8ff;color:#004a99;border-color:#6aaae0;font-weight:600}
 .solve-toolbar button.warn{background:#ffe0e0;color:#900;border-color:#f4a8a8}
 .zoom-bar{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .zoom-bar span{font-size:12px;color:#666}
@@ -91,11 +93,12 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 .clue-divider{height:1px;background:#9966cc;opacity:0.6;flex-shrink:0;margin:0 2px}
 .solve-input{width:100%;height:100%;border:none;background:transparent;text-align:center;font-weight:600;color:#222;outline:none;text-transform:uppercase;display:block;cursor:text}
 .solve-input:focus{background:#fffde0}
-.solve-input.wrong{background:#ffd0d8;color:#a01030}
+.solve-input.wrong{background:#ffd0d8!important;color:#a01030}
 .solve-input.in-active-word{background:#fff5b8}
 .solve-input.active-cell,.solve-input:focus.active-cell{background:#ffe680}
 #celebrate{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;align-items:center;justify-content:center;padding:16px}
 #celebrate .cel-box{background:#fff;border-radius:10px;padding:24px;width:340px;max-width:95vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+.cred-warn{background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;font-size:12px;color:#664d03;margin-bottom:16px;line-height:1.5}
 @media print{
   nav,.page-header,main,.solve-toolbar,.zoom-bar,.solver-header{display:none!important}
   td.t-answer{background:#fff!important}
@@ -113,25 +116,18 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
     <a href="directory.html" class="active">Puzzles</a>
   </div>
 </nav>
-
 <div class="page-header">
-  <div>
-    <h1>📖 Puzzle Directory</h1>
-    <p>Click any puzzle to solve it online</p>
-  </div>
-  <div class="header-btns">
-    <a href="builder.html" style="background:#7744bb;color:#fff;text-decoration:none;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:600">+ Create puzzle</a>
-    <a href="delete-puzzles.html" style="background:#dc3545;color:#fff;text-decoration:none;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:600">🗑 Delete puzzles</a>
-  </div>
+  <div><h1>📖 Puzzle Directory</h1><p>Click any puzzle to solve it online</p></div>
+  <a href="builder.html" style="background:#7744bb;color:#fff;text-decoration:none;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:600">+ Create puzzle</a>
 </div>
-
 <main>
+  <div id="cred-warn-area"></div>
   <div class="dir-toolbar">
     <input type="text" id="search" placeholder="Search puzzles…" oninput="renderDir()">
     <select id="sort-by" onchange="renderDir()">
+      <option value="alpha" selected>A–Z</option>
       <option value="newest">Newest first</option>
       <option value="oldest">Oldest first</option>
-      <option value="alpha">A–Z</option>
     </select>
     <button class="refresh-btn" onclick="loadDir()">↻ Refresh</button>
   </div>
@@ -141,18 +137,23 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 </main>
 
 <!-- Solver overlay -->
-<div id="solver-overlay">
-  <div class="solver-box">
+<div id="solver-overlay" onclick="solverBgClick(event)">
+  <div class="solver-box" id="solver-box">
     <div class="solver-header">
       <h2 id="solver-title">Puzzle</h2>
       <button class="solver-close" onclick="closeSolver()">✕ Close</button>
     </div>
     <div class="solver-body">
       <div class="solve-toolbar">
-        <button class="green" onclick="window.print()">🖨 Print</button>
-        <button onclick="solverCheck()">Check answers</button>
-        <button onclick="solverReveal()">Reveal answers</button>
-        <button class="warn" onclick="solverClear()">Clear</button>
+        <div class="solve-toolbar-left">
+          <button class="blue" onclick="saveProgress()">💾 Save progress</button>
+          <button onclick="solverCheck()">✓ Check answers</button>
+        </div>
+        <div class="solve-toolbar-right">
+          <button class="green" onclick="window.print()">🖨 Print</button>
+          <button onclick="solverReveal()">Reveal</button>
+          <button class="warn" onclick="solverClear()">Clear</button>
+        </div>
       </div>
       <div class="zoom-bar">
         <span>Zoom:</span>
@@ -162,7 +163,7 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
         <button onclick="sZoomFit()">Fit</button>
         <span id="s-zoom-val">100%</span>
       </div>
-      <div class="grid-wrap" id="s-grid-wrap">
+      <div class="grid-wrap" id="s-grid-wrap" onclick="gridWrapClick(event)">
         <div id="s-zoom-wrap" style="transform-origin:top left;display:inline-block">
           <table class="puzzle" id="s-grid"></table>
         </div>
@@ -184,6 +185,7 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
+// ── Arrow SVG ─────────────────────────────────────────────────────────────────
 function arrowSVG(dir,s){
   const c=s/2,m=Math.ceil(s*0.12),e=s-m,sw=Math.max(1.6,s/12),ah=s*0.34;
   function head(x,y,dx,dy){const l=Math.sqrt(dx*dx+dy*dy),nx=dx/l,ny=dy/l,px=-ny,py=nx;return`M${x-nx*ah+px*ah*0.45},${y-ny*ah+py*ah*0.45} L${x},${y} L${x-nx*ah-px*ah*0.45},${y-ny*ah-py*ah*0.45}`;}
@@ -210,214 +212,363 @@ function getWordCells(dir,ans,or,oc){
   return cells;
 }
 
-// ── Directory ──────────────────────────────────────────────────────────────────
-let allPuzzles=[], activeSize='all';
+// ── Progress storage ───────────────────────────────────────────────────────────
+const PROGRESS_KEY = 'arrowword_progress';
+const COMPLETE_KEY = 'arrowword_complete';
 
-async function loadDir(){
-  document.getElementById('dir-content').innerHTML='<div class="loading">Loading puzzles…</div>';
-  document.getElementById('size-tabs').innerHTML='';
-  try{
-    allPuzzles=await cloudGetPuzzles();
+function saveProgressData(puzzleId, answers) {
+  const all = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
+  all[puzzleId] = { answers, savedAt: Date.now() };
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(all));
+}
+
+function loadProgressData(puzzleId) {
+  const all = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
+  return all[puzzleId] || null;
+}
+
+function markComplete(puzzleId) {
+  const all = JSON.parse(localStorage.getItem(COMPLETE_KEY) || '{}');
+  all[puzzleId] = Date.now();
+  localStorage.setItem(COMPLETE_KEY, JSON.stringify(all));
+  // clear saved progress since it's now done
+  const prog = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
+  delete prog[puzzleId];
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(prog));
+}
+
+function getPuzzleStatus(puzzleId) {
+  const complete = JSON.parse(localStorage.getItem(COMPLETE_KEY) || '{}');
+  if (complete[puzzleId]) return 'complete';
+  const progress = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
+  if (progress[puzzleId]) return 'inprogress';
+  return 'new';
+}
+
+// ── Directory ──────────────────────────────────────────────────────────────────
+let allPuzzles = [], activeSize = 'all';
+
+async function loadDir() {
+  document.getElementById('dir-content').innerHTML = '<div class="loading">Loading puzzles…</div>';
+  document.getElementById('size-tabs').innerHTML = '';
+  try {
+    allPuzzles = await cloudGetPuzzles();
+    cloudShowCredentialWarning('#cred-warn-area');
     buildSizeTabs();
     renderDir();
-  }catch(e){
-    document.getElementById('dir-content').innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load puzzles.<br><small style="color:#bbb">${escHtml(e.message)}</small></p><button onclick="loadDir()" style="background:#7744bb;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;margin-top:12px">Try again</button></div>`;
+  } catch(e) {
+    document.getElementById('dir-content').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load puzzles.<br><small style="color:#bbb">${escHtml(e.message)}</small></p><button onclick="loadDir()" style="background:#7744bb;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;margin-top:12px">Try again</button></div>`;
   }
 }
 
-function getSizeLabel(p){
-  if(!p.cols||!p.rows)return'Unknown';
-  return p.cols+'×'+p.rows;
+function getSizeLabel(p) {
+  return (p.cols && p.rows) ? p.cols + '×' + p.rows : 'Unknown';
 }
 
-function buildSizeTabs(){
-  const counts={};
-  allPuzzles.forEach(p=>{const s=getSizeLabel(p);counts[s]=(counts[s]||0)+1;});
-  const sizes=Object.keys(counts).sort((a,b)=>{
-    const [ac,ar]=a.split('×').map(Number);
-    const [bc,br]=b.split('×').map(Number);
-    return (ac*ar)-(bc*br);
+function buildSizeTabs() {
+  const counts = {};
+  allPuzzles.forEach(p => { const s = getSizeLabel(p); counts[s] = (counts[s] || 0) + 1; });
+  const sizes = Object.keys(counts).sort((a, b) => {
+    const [ac, ar] = a.split('×').map(Number);
+    const [bc, br] = b.split('×').map(Number);
+    return (ac * ar) - (bc * br);
   });
-  const tabs=document.getElementById('size-tabs');
-  if(sizes.length<=1){tabs.style.display='none';return;}
-  tabs.style.display='flex';
-  const allBtn=document.createElement('button');
-  allBtn.className='size-tab active';allBtn.textContent='All ('+allPuzzles.length+')';
-  allBtn.onclick=()=>setSize('all');tabs.appendChild(allBtn);
-  sizes.forEach(s=>{
-    const btn=document.createElement('button');
-    btn.className='size-tab';btn.textContent=s+' ('+counts[s]+')';
-    btn.dataset.size=s;btn.onclick=()=>setSize(s);tabs.appendChild(btn);
+  const tabs = document.getElementById('size-tabs');
+  if (sizes.length <= 1) { tabs.style.display = 'none'; return; }
+  tabs.style.display = 'flex';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'size-tab active'; allBtn.textContent = 'All (' + allPuzzles.length + ')';
+  allBtn.onclick = () => setSize('all'); tabs.appendChild(allBtn);
+  sizes.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'size-tab'; btn.textContent = s + ' (' + counts[s] + ')';
+    btn.dataset.size = s; btn.onclick = () => setSize(s); tabs.appendChild(btn);
   });
 }
 
-function setSize(s){
-  activeSize=s;
-  document.querySelectorAll('.size-tab').forEach(t=>t.classList.toggle('active',t.dataset.size===s||(s==='all'&&!t.dataset.size)));
+function setSize(s) {
+  activeSize = s;
+  document.querySelectorAll('.size-tab').forEach(t => t.classList.toggle('active', t.dataset.size === s || (s === 'all' && !t.dataset.size)));
   renderDir();
 }
 
-function renderDir(){
-  const q=(document.getElementById('search').value||'').toLowerCase();
-  const sort=document.getElementById('sort-by').value;
-  let list=allPuzzles.filter(p=>{
-    const matchQ=!q||p.title.toLowerCase().includes(q);
-    const matchSize=activeSize==='all'||getSizeLabel(p)===activeSize;
-    return matchQ&&matchSize;
+function renderDir() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const sort = document.getElementById('sort-by').value;
+  let list = allPuzzles.filter(p => {
+    const matchQ = !q || p.title.toLowerCase().includes(q);
+    const matchSize = activeSize === 'all' || getSizeLabel(p) === activeSize;
+    return matchQ && matchSize;
   });
-  if(sort==='oldest')list=[...list].reverse();
-  else if(sort==='alpha')list=[...list].sort((a,b)=>a.title.localeCompare(b.title));
-  document.getElementById('count-line').textContent=list.length+' puzzle'+(list.length===1?'':'s');
-  const content=document.getElementById('dir-content');
-  if(!list.length){
-    content.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><p>${q?'No puzzles match your search.':'No puzzles published yet.'}</p><a href="builder.html" style="color:#7744bb;font-weight:600">Open the builder →</a></div>`;
+  if (sort === 'newest') list = [...list].sort((a, b) => (b.publishedAtMs || 0) - (a.publishedAtMs || 0));
+  else if (sort === 'oldest') list = [...list].sort((a, b) => (a.publishedAtMs || 0) - (b.publishedAtMs || 0));
+  else list = [...list].sort((a, b) => a.title.localeCompare(b.title)); // alpha default
+  document.getElementById('count-line').textContent = list.length + ' puzzle' + (list.length === 1 ? '' : 's');
+  const content = document.getElementById('dir-content');
+  if (!list.length) {
+    content.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>${q ? 'No puzzles match your search.' : 'No puzzles published yet.'}</p><a href="builder.html" style="color:#7744bb;font-weight:600">Open the builder →</a></div>`;
     return;
   }
-  // Group by size if showing all and more than one size exists
-  const sizes=[...new Set(list.map(p=>getSizeLabel(p)))];
-  if(activeSize==='all'&&sizes.length>1&&!q&&sort==='newest'){
-    content.innerHTML=sizes.map(s=>{
-      const group=list.filter(p=>getSizeLabel(p)===s);
-      return`<div class="group-section">
-        <div class="group-title">${s} grid <span class="group-count">${group.length} puzzle${group.length===1?'':'s'}</span></div>
-        <div class="puzzle-grid">${group.map(p=>cardHtml(p)).join('')}</div>
+  const sizes = [...new Set(list.map(p => getSizeLabel(p)))];
+  if (activeSize === 'all' && sizes.length > 1 && !q && sort === 'alpha') {
+    content.innerHTML = sizes.sort().map(s => {
+      const group = list.filter(p => getSizeLabel(p) === s);
+      return `<div class="group-section">
+        <div class="group-title">${s} grid <span class="group-count">${group.length} puzzle${group.length === 1 ? '' : 's'}</span></div>
+        <div class="puzzle-grid">${group.map(p => cardHtml(p)).join('')}</div>
       </div>`;
     }).join('');
   } else {
-    content.innerHTML='<div class="puzzle-grid">'+list.map(p=>cardHtml(p)).join('')+'</div>';
+    content.innerHTML = '<div class="puzzle-grid">' + list.map(p => cardHtml(p)).join('') + '</div>';
   }
 }
 
-function cardHtml(p){
-  return`<div class="pcard">
+function cardHtml(p) {
+  const status = getPuzzleStatus(p.id);
+  const badge = status === 'complete'
+    ? '<span class="pcard-badge badge-complete">✓ Completed</span>'
+    : status === 'inprogress'
+    ? '<span class="pcard-badge badge-inprogress">⏳ In progress</span>'
+    : '';
+  return `<div class="pcard">
+    ${badge}
     <div class="pcard-title">${escHtml(p.title)}</div>
     <div class="pcard-meta">Published ${p.publishedAt}</div>
-    ${p.cols&&p.rows?`<div class="pcard-size">${p.cols}×${p.rows} grid</div>`:''}
-    <button class="btn-solve" onclick="openSolver('${p.id}')">Solve →</button>
+    ${p.cols && p.rows ? `<div class="pcard-size">${p.cols}×${p.rows} grid</div>` : ''}
+    <button class="btn-solve" onclick="openSolver('${p.id}')">
+      ${status === 'inprogress' ? '▶ Continue solving' : status === 'complete' ? '↺ Solve again' : 'Solve →'}
+    </button>
   </div>`;
 }
 
 // ── Solver ─────────────────────────────────────────────────────────────────────
-let sWords=[],sActive=null,sCurZoom=1;
+let sWords = [], sActive = null, sCurZoom = 1, sCurPuzzleId = null;
 
-async function openSolver(id){
-  document.getElementById('solver-title').textContent='Loading…';
-  document.getElementById('solver-overlay').classList.add('open');
-  document.body.style.overflow='hidden';
-  history.replaceState(null,'','?id='+id);
-  try{
-    const entry=allPuzzles.find(p=>p.id===id);
-    if(!entry||!entry.data)throw new Error('Puzzle data not found');
-    document.getElementById('solver-title').textContent=entry.title;
-    buildSolverGrid(entry.data);
-    setTimeout(()=>{sZoomFit();fitSolverText();},80);
-  }catch(e){
-    document.getElementById('s-grid').innerHTML=`<tr><td style="padding:24px;color:#c00">Could not load: ${escHtml(e.message)}</td></tr>`;
+function solverBgClick(e) {
+  // clicking the dark overlay (not the box) closes the solver
+  if (e.target === document.getElementById('solver-overlay')) closeSolver();
+}
+
+function gridWrapClick(e) {
+  // clicking empty space inside the grid wrap deselects current word
+  if (e.target === document.getElementById('s-grid-wrap') || e.target === document.getElementById('s-zoom-wrap') || e.target.tagName === 'TD' || e.target.closest('td.t-empty') || e.target.closest('td.t-black')) {
+    sActive = null;
+    sHighlight();
   }
 }
-function closeSolver(){document.getElementById('solver-overlay').classList.remove('open');document.body.style.overflow='';history.replaceState(null,'','directory.html');sActive=null;}
 
-function buildSolverGrid(data){
-  const rows=data.rows,cols=data.cols,cSz=data.cellSizePx||64,tSz=data.textSizePx||12;
-  const arSz=Math.max(10,Math.round(cSz*0.24));
-  sWords=[];sActive=null;
-  const G2=[];
-  for(let r=0;r<rows;r++){G2.push([]);for(let c=0;c<cols;c++)G2[r].push({t:'empty',clues:[],answerOf:null});}
-  data.cells.forEach(cell=>{
-    if(cell.t==='black'){G2[cell.r][cell.c].t='black';}
-    else if(cell.t==='clue'){
-      G2[cell.r][cell.c]={t:'clue',clues:cell.clues.map(cl=>({...cl})),answerOf:null};
-      cell.clues.forEach((cl,ci)=>{
-        const wcells=getWordCells(cl.dir,cl.ans,cell.r,cell.c).filter(([ar,ac])=>ar>=0&&ar<rows&&ac>=0&&ac<cols);
-        sWords.push({or:cell.r,oc:cell.c,ci,cells:wcells,ans:cl.ans});
-        wcells.forEach(([ar,ac],i)=>{if(G2[ar][ac].t==='answer')G2[ar][ac].letter2=cl.ans[i];else G2[ar][ac]={t:'answer',clues:[],answerOf:{letter:cl.ans[i]}};});
+async function openSolver(id) {
+  sCurPuzzleId = id;
+  document.getElementById('solver-title').textContent = 'Loading…';
+  document.getElementById('solver-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  history.replaceState(null, '', '?id=' + id);
+  try {
+    const entry = allPuzzles.find(p => p.id === id);
+    if (!entry || !entry.data) throw new Error('Puzzle data not found');
+    document.getElementById('solver-title').textContent = entry.title;
+    buildSolverGrid(entry.data);
+    setTimeout(() => { sZoomFit(); fitSolverText(); }, 80);
+    // restore saved progress if any
+    const prog = loadProgressData(id);
+    if (prog && prog.answers) {
+      setTimeout(() => {
+        Object.entries(prog.answers).forEach(([key, val]) => {
+          const [r, c] = key.split(',').map(Number);
+          const inp = sGetInp(r, c);
+          if (inp) inp.value = val;
+        });
+      }, 150);
+    }
+  } catch(e) {
+    document.getElementById('s-grid').innerHTML = `<tr><td style="padding:24px;color:#c00">Could not load: ${escHtml(e.message)}</td></tr>`;
+  }
+}
+
+function closeSolver() {
+  document.getElementById('solver-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  history.replaceState(null, '', 'directory.html');
+  sActive = null;
+  sCurPuzzleId = null;
+}
+
+function saveProgress() {
+  if (!sCurPuzzleId) return;
+  const answers = {};
+  document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
+    if (inp.value) answers[inp.dataset.r + ',' + inp.dataset.c] = inp.value;
+  });
+  saveProgressData(sCurPuzzleId, answers);
+  // update card badge
+  renderDir();
+  // brief feedback
+  const btn = document.querySelector('.solve-toolbar-left .blue');
+  if (btn) { const orig = btn.textContent; btn.textContent = '✓ Saved!'; setTimeout(() => btn.textContent = orig, 1500); }
+}
+
+function buildSolverGrid(data) {
+  const rows = data.rows, cols = data.cols, cSz = data.cellSizePx || 64, tSz = data.textSizePx || 12;
+  const arSz = Math.max(10, Math.round(cSz * 0.24));
+  sWords = []; sActive = null;
+  const G2 = [];
+  for (let r = 0; r < rows; r++) { G2.push([]); for (let c = 0; c < cols; c++) G2[r].push({ t: 'empty', clues: [], answerOf: null }); }
+  data.cells.forEach(cell => {
+    if (cell.t === 'black') { G2[cell.r][cell.c].t = 'black'; }
+    else if (cell.t === 'clue') {
+      G2[cell.r][cell.c] = { t: 'clue', clues: cell.clues.map(cl => ({ ...cl })), answerOf: null };
+      cell.clues.forEach((cl, ci) => {
+        const wcells = getWordCells(cl.dir, cl.ans, cell.r, cell.c).filter(([ar, ac]) => ar >= 0 && ar < rows && ac >= 0 && ac < cols);
+        sWords.push({ or: cell.r, oc: cell.c, ci, cells: wcells, ans: cl.ans });
+        wcells.forEach(([ar, ac], i) => { if (G2[ar][ac].t === 'answer') G2[ar][ac].letter2 = cl.ans[i]; else G2[ar][ac] = { t: 'answer', clues: [], answerOf: { letter: cl.ans[i] } }; });
       });
     }
   });
-  const sz=`width:${cSz}px;height:${cSz}px;min-width:${cSz}px;min-height:${cSz}px;max-width:${cSz}px;max-height:${cSz}px`;
-  const tbl=document.getElementById('s-grid');tbl.innerHTML='';
-  for(let r=0;r<rows;r++){
-    const tr=document.createElement('tr');
-    for(let c=0;c<cols;c++){
-      const cell=G2[r][c],td=document.createElement('td');td.setAttribute('style',sz);
-      if(cell.t==='black'){td.className='t-black';}
-      else if(cell.t==='clue'){
-        td.className='t-clue';
-        const inner=document.createElement('div');inner.className='clue-inner';
-        const isMulti=cell.clues.length>1;
-        cell.clues.forEach((cl,idx)=>{
-          if(idx>0){const dv=document.createElement('div');dv.className='clue-divider';inner.appendChild(dv);}
-          const slot=document.createElement('div');slot.className='clue-slot '+eAPC(cl.dir,isMulti);
-          slot.dataset.or=r;slot.dataset.oc=c;slot.dataset.ci=idx;
-          const fs=cl.textSize&&cl.textSize>0?cl.textSize:tSz;
-          slot.style.flex=fs+' 1 0';
-          slot.innerHTML=`<div class="slot-text" style="font-size:${fs}px">${escHtml(cl.clue||'?')}</div><div class="slot-arrow">${arrowSVG(cl.dir,arSz)}</div>`;
-          slot.addEventListener('click',()=>sPickClue(+slot.dataset.or,+slot.dataset.oc,+slot.dataset.ci));
+  const sz = `width:${cSz}px;height:${cSz}px;min-width:${cSz}px;min-height:${cSz}px;max-width:${cSz}px;max-height:${cSz}px`;
+  const tbl = document.getElementById('s-grid'); tbl.innerHTML = '';
+  for (let r = 0; r < rows; r++) {
+    const tr = document.createElement('tr');
+    for (let c = 0; c < cols; c++) {
+      const cell = G2[r][c], td = document.createElement('td'); td.setAttribute('style', sz);
+      if (cell.t === 'black') { td.className = 't-black'; }
+      else if (cell.t === 'clue') {
+        td.className = 't-clue';
+        const inner = document.createElement('div'); inner.className = 'clue-inner';
+        const isMulti = cell.clues.length > 1;
+        cell.clues.forEach((cl, idx) => {
+          if (idx > 0) { const dv = document.createElement('div'); dv.className = 'clue-divider'; inner.appendChild(dv); }
+          const slot = document.createElement('div'); slot.className = 'clue-slot ' + eAPC(cl.dir, isMulti);
+          slot.dataset.or = r; slot.dataset.oc = c; slot.dataset.ci = idx;
+          const fs = cl.textSize && cl.textSize > 0 ? cl.textSize : tSz;
+          slot.style.flex = fs + ' 1 0';
+          slot.innerHTML = `<div class="slot-text" style="font-size:${fs}px">${escHtml(cl.clue || '?')}</div><div class="slot-arrow">${arrowSVG(cl.dir, arSz)}</div>`;
+          slot.addEventListener('click', e => { e.stopPropagation(); sPickClue(+slot.dataset.or, +slot.dataset.oc, +slot.dataset.ci); });
           inner.appendChild(slot);
         });
         td.appendChild(inner);
-      }else if(cell.t==='answer'){
-        td.className='t-answer';
-        const inp=document.createElement('input');inp.className='solve-input';inp.type='text';inp.maxLength=1;
-        inp.dataset.r=r;inp.dataset.c=c;inp.style.fontSize=Math.round(cSz*0.38)+'px';
-        inp.setAttribute('autocapitalize','characters');inp.setAttribute('autocomplete','off');inp.setAttribute('autocorrect','off');inp.setAttribute('spellcheck','false');
-        inp.addEventListener('input',sSolveInput);inp.addEventListener('keydown',sSolveKeydown);inp.addEventListener('focus',sSolveFocus);
+      } else if (cell.t === 'answer') {
+        td.className = 't-answer';
+        const inp = document.createElement('input'); inp.className = 'solve-input'; inp.type = 'text'; inp.maxLength = 1;
+        inp.dataset.r = r; inp.dataset.c = c; inp.style.fontSize = Math.round(cSz * 0.38) + 'px';
+        inp.setAttribute('autocapitalize', 'characters'); inp.setAttribute('autocomplete', 'off');
+        inp.setAttribute('autocorrect', 'off'); inp.setAttribute('spellcheck', 'false');
+        inp.addEventListener('input', sSolveInput);
+        inp.addEventListener('keydown', sSolveKeydown);
+        inp.addEventListener('focus', sSolveFocus);
         td.appendChild(inp);
-      }else{td.className='t-empty';}
+      } else { td.className = 't-empty'; }
       tr.appendChild(td);
     }
     tbl.appendChild(tr);
   }
 }
-function fitSolverText(){document.querySelectorAll('#s-grid .clue-slot').forEach(slot=>{const t=slot.querySelector('.slot-text');if(!t)return;let fs=parseFloat(t.style.fontSize)||10,s=40;while(s-->0&&fs>4&&(slot.scrollWidth>slot.clientWidth+1||slot.scrollHeight>slot.clientHeight+1)){fs-=0.5;t.style.fontSize=fs+'px';}});}
-function sGetInp(r,c){return document.querySelector('#s-grid input.solve-input[data-r="'+r+'"][data-c="'+c+'"]');}
-function sPickClue(or,oc,ci){const w=sWords.find(x=>x.or===or&&x.oc===oc&&x.ci===ci);if(!w)return;sActive={or,oc,ci,cells:w.cells,ans:w.ans,idx:0};sHighlight();const inp=sGetInp(w.cells[0][0],w.cells[0][1]);if(inp){inp.focus();inp.select();}}
-function sHighlight(){
-  document.querySelectorAll('#s-grid .solve-input').forEach(i=>i.classList.remove('in-active-word','active-cell'));
-  document.querySelectorAll('#s-grid .clue-slot').forEach(s=>s.classList.remove('active-clue'));
-  if(!sActive)return;
-  sActive.cells.forEach(([r,c],i)=>{const inp=sGetInp(r,c);if(inp){inp.classList.add('in-active-word');if(i===sActive.idx)inp.classList.add('active-cell');}});
-  const slot=document.querySelector('#s-grid .clue-slot[data-or="'+sActive.or+'"][data-oc="'+sActive.oc+'"][data-ci="'+sActive.ci+'"]');
-  if(slot)slot.classList.add('active-clue');
+
+function fitSolverText() {
+  document.querySelectorAll('#s-grid .clue-slot').forEach(slot => {
+    const t = slot.querySelector('.slot-text'); if (!t) return;
+    let fs = parseFloat(t.style.fontSize) || 10, s = 40;
+    while (s-- > 0 && fs > 4 && (slot.scrollWidth > slot.clientWidth + 1 || slot.scrollHeight > slot.clientHeight + 1)) { fs -= 0.5; t.style.fontSize = fs + 'px'; }
+  });
 }
-function sSolveFocus(e){
-  const inp=e.target;inp.classList.remove('wrong');
-  const r=+inp.dataset.r,c=+inp.dataset.c;
-  if(sActive){const i=sActive.cells.findIndex(([a,b])=>a===r&&b===c);if(i>=0){sActive.idx=i;sHighlight();return;}}
-  const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));
-  if(w){sActive={or:w.or,oc:w.oc,ci:w.ci,cells:w.cells,ans:w.ans,idx:w.cells.findIndex(([a,b])=>a===r&&b===c)};if(sActive.idx<0)sActive.idx=0;sHighlight();}
+
+function sGetInp(r, c) { return document.querySelector('#s-grid input.solve-input[data-r="' + r + '"][data-c="' + c + '"]'); }
+
+function sPickClue(or, oc, ci) {
+  const w = sWords.find(x => x.or === or && x.oc === oc && x.ci === ci); if (!w) return;
+  sActive = { or, oc, ci, cells: w.cells, ans: w.ans, idx: 0 };
+  sHighlight();
+  const inp = sGetInp(w.cells[0][0], w.cells[0][1]); if (inp) { inp.focus(); inp.select(); }
 }
-function sSolveInput(e){
-  const inp=e.target;inp.value=(inp.value||'').slice(-1).toUpperCase().replace(/[^A-Z]/,'');inp.classList.remove('wrong');
-  if(inp.value&&sActive){const next=sActive.idx+1;if(next<sActive.cells.length){sActive.idx=next;const[nr,nc]=sActive.cells[next];const ni=sGetInp(nr,nc);if(ni){ni.focus();ni.select();}}else sHighlight();}
+
+function sHighlight() {
+  document.querySelectorAll('#s-grid .solve-input').forEach(i => i.classList.remove('in-active-word', 'active-cell'));
+  document.querySelectorAll('#s-grid .clue-slot').forEach(s => s.classList.remove('active-clue'));
+  if (!sActive) return;
+  sActive.cells.forEach(([r, c], i) => { const inp = sGetInp(r, c); if (inp) { inp.classList.add('in-active-word'); if (i === sActive.idx) inp.classList.add('active-cell'); } });
+  const slot = document.querySelector('#s-grid .clue-slot[data-or="' + sActive.or + '"][data-oc="' + sActive.oc + '"][data-ci="' + sActive.ci + '"]');
+  if (slot) slot.classList.add('active-clue');
+}
+
+function sSolveFocus(e) {
+  const inp = e.target; inp.classList.remove('wrong');
+  const r = +inp.dataset.r, c = +inp.dataset.c;
+  if (sActive) { const i = sActive.cells.findIndex(([a, b]) => a === r && b === c); if (i >= 0) { sActive.idx = i; sHighlight(); return; } }
+  const w = sWords.find(x => x.cells.some(([a, b]) => a === r && b === c));
+  if (w) { sActive = { or: w.or, oc: w.oc, ci: w.ci, cells: w.cells, ans: w.ans, idx: w.cells.findIndex(([a, b]) => a === r && b === c) }; if (sActive.idx < 0) sActive.idx = 0; sHighlight(); }
+}
+
+function sSolveInput(e) {
+  const inp = e.target;
+  inp.value = (inp.value || '').slice(-1).toUpperCase().replace(/[^A-Z]/, ''); inp.classList.remove('wrong');
+  if (inp.value && sActive) { const next = sActive.idx + 1; if (next < sActive.cells.length) { sActive.idx = next; const [nr, nc] = sActive.cells[next]; const ni = sGetInp(nr, nc); if (ni) { ni.focus(); ni.select(); } } else sHighlight(); }
   sMaybeCelebrate();
 }
-function sSolveKeydown(e){
-  const inp=e.target;
-  if(e.key==='Backspace'){if(inp.value)return;if(sActive&&sActive.idx>0){e.preventDefault();sActive.idx--;const[pr,pc]=sActive.cells[sActive.idx];const pi=sGetInp(pr,pc);if(pi){pi.value='';pi.classList.remove('wrong');pi.focus();pi.select();}}}
-  else if(e.key==='ArrowRight'||e.key==='ArrowDown'){if(sActive&&sActive.idx<sActive.cells.length-1){e.preventDefault();sActive.idx++;const[nr,nc]=sActive.cells[sActive.idx];const ni=sGetInp(nr,nc);if(ni){ni.focus();ni.select();}}}
-  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){if(sActive&&sActive.idx>0){e.preventDefault();sActive.idx--;const[pr,pc]=sActive.cells[sActive.idx];const pi=sGetInp(pr,pc);if(pi){pi.focus();pi.select();}}}
-}
-function sMaybeCelebrate(){
-  const inputs=document.querySelectorAll('#s-grid td.t-answer input');if(!inputs.length)return;
-  for(let i=0;i<inputs.length;i++){const r=+inputs[i].dataset.r,c=+inputs[i].dataset.c;const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));if(!w)return;const idx=w.cells.findIndex(([a,b])=>a===r&&b===c);if((inputs[i].value||'').toUpperCase()!==w.ans[idx])return;}
-  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
-  sActive=null;sHighlight();document.getElementById('celebrate').style.display='flex';
-}
-function solverCheck(){
-  let wrong=0,filled=0;
-  document.querySelectorAll('#s-grid td.t-answer input').forEach(inp=>{const r=+inp.dataset.r,c=+inp.dataset.c;const got=(inp.value||'').toUpperCase();if(!got){inp.classList.remove('wrong');return;}filled++;const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));if(!w)return;const idx=w.cells.findIndex(([a,b])=>a===r&&b===c);if(got!==w.ans[idx]){inp.classList.add('wrong');wrong++;}else inp.classList.remove('wrong');});
-  if(!filled)alert('No letters typed yet.');else alert(`${filled-wrong} correct, ${wrong} wrong (out of ${filled} typed).`);
-}
-function solverReveal(){if(!confirm('Reveal all answers?'))return;sWords.forEach(w=>{w.cells.forEach(([r,c],i)=>{const inp=sGetInp(r,c);if(inp){inp.value=w.ans[i];inp.classList.remove('wrong');}});});}
-function solverClear(){if(!confirm('Clear all your answers?'))return;document.querySelectorAll('#s-grid .solve-input').forEach(i=>{i.value='';i.classList.remove('wrong');});sActive=null;sHighlight();}
-function sApplyZoom(){const w=document.getElementById('s-zoom-wrap');if(!w)return;w.style.transform='scale('+sCurZoom+')';document.getElementById('s-zoom-val').textContent=Math.round(sCurZoom*100)+'%';const tbl=document.getElementById('s-grid');if(tbl&&tbl.offsetWidth){w.style.width=(tbl.offsetWidth*sCurZoom)+'px';w.style.height=(tbl.offsetHeight*sCurZoom)+'px';}}
-function sSetZoom(z){sCurZoom=Math.max(0.25,Math.min(3,z));sApplyZoom();}
-function sZoomBy(d){sSetZoom(sCurZoom+d);}
-function sZoomFit(){const wrap=document.getElementById('s-grid-wrap');const tbl=document.getElementById('s-grid');if(!wrap||!tbl||!tbl.offsetWidth)return;sSetZoom(Math.min(1,(wrap.clientWidth-20)/tbl.offsetWidth));}
 
+function sSolveKeydown(e) {
+  const inp = e.target;
+  if (e.key === 'Backspace') { if (inp.value) return; if (sActive && sActive.idx > 0) { e.preventDefault(); sActive.idx--; const [pr, pc] = sActive.cells[sActive.idx]; const pi = sGetInp(pr, pc); if (pi) { pi.value = ''; pi.classList.remove('wrong'); pi.focus(); pi.select(); } } }
+  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { if (sActive && sActive.idx < sActive.cells.length - 1) { e.preventDefault(); sActive.idx++; const [nr, nc] = sActive.cells[sActive.idx]; const ni = sGetInp(nr, nc); if (ni) { ni.focus(); ni.select(); } } }
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { if (sActive && sActive.idx > 0) { e.preventDefault(); sActive.idx--; const [pr, pc] = sActive.cells[sActive.idx]; const pi = sGetInp(pr, pc); if (pi) { pi.focus(); pi.select(); } } }
+  else if (e.key === 'Escape') { sActive = null; sHighlight(); inp.blur(); }
+}
+
+function sMaybeCelebrate() {
+  const inputs = document.querySelectorAll('#s-grid td.t-answer input'); if (!inputs.length) return;
+  for (let i = 0; i < inputs.length; i++) {
+    const r = +inputs[i].dataset.r, c = +inputs[i].dataset.c;
+    const w = sWords.find(x => x.cells.some(([a, b]) => a === r && b === c)); if (!w) return;
+    const idx = w.cells.findIndex(([a, b]) => a === r && b === c);
+    if ((inputs[i].value || '').toUpperCase() !== w.ans[idx]) return;
+  }
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  sActive = null; sHighlight();
+  if (sCurPuzzleId) markComplete(sCurPuzzleId);
+  renderDir(); // update badge
+  document.getElementById('celebrate').style.display = 'flex';
+}
+
+function solverCheck() {
+  let wrong = 0, filled = 0;
+  document.querySelectorAll('#s-grid td.t-answer input').forEach(inp => {
+    const r = +inp.dataset.r, c = +inp.dataset.c;
+    const got = (inp.value || '').toUpperCase();
+    if (!got) { inp.classList.remove('wrong'); return; }
+    filled++;
+    const w = sWords.find(x => x.cells.some(([a, b]) => a === r && b === c)); if (!w) return;
+    const idx = w.cells.findIndex(([a, b]) => a === r && b === c);
+    if (got !== w.ans[idx]) { inp.classList.add('wrong'); wrong++; } else inp.classList.remove('wrong');
+  });
+  // deselect after checking (point 2)
+  sActive = null; sHighlight();
+  if (!filled) alert('No letters typed yet.');
+  else alert(`${filled - wrong} correct, ${wrong} wrong (out of ${filled} typed).`);
+}
+
+function solverReveal() {
+  if (!confirm('Reveal all answers?')) return;
+  sWords.forEach(w => { w.cells.forEach(([r, c], i) => { const inp = sGetInp(r, c); if (inp) { inp.value = w.ans[i]; inp.classList.remove('wrong'); } }); });
+}
+
+function solverClear() {
+  if (!confirm('Clear all your answers?')) return;
+  document.querySelectorAll('#s-grid .solve-input').forEach(i => { i.value = ''; i.classList.remove('wrong'); });
+  sActive = null; sHighlight();
+}
+
+function sApplyZoom() {
+  const w = document.getElementById('s-zoom-wrap'); if (!w) return;
+  w.style.transform = 'scale(' + sCurZoom + ')';
+  document.getElementById('s-zoom-val').textContent = Math.round(sCurZoom * 100) + '%';
+  const tbl = document.getElementById('s-grid');
+  if (tbl && tbl.offsetWidth) { w.style.width = (tbl.offsetWidth * sCurZoom) + 'px'; w.style.height = (tbl.offsetHeight * sCurZoom) + 'px'; }
+}
+function sSetZoom(z) { sCurZoom = Math.max(0.25, Math.min(3, z)); sApplyZoom(); }
+function sZoomBy(d) { sSetZoom(sCurZoom + d); }
+function sZoomFit() { const wrap = document.getElementById('s-grid-wrap'); const tbl = document.getElementById('s-grid'); if (!wrap || !tbl || !tbl.offsetWidth) return; sSetZoom(Math.min(1, (wrap.clientWidth - 20) / tbl.offsetWidth)); }
+
+// ── Init ───────────────────────────────────────────────────────────────────────
 loadDir();
-(function(){const id=new URLSearchParams(location.search).get('id');if(id)setTimeout(()=>openSolver(id),300);})();
+(function () { const id = new URLSearchParams(location.search).get('id'); if (id) setTimeout(() => openSolver(id), 300); })();
 </script>
 </body>
 </html>
