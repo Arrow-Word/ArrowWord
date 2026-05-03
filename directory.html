@@ -126,10 +126,28 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
     <a href="directory.html" class="active">Puzzles</a>
   </div>
 </nav>
-<!-- Sign-in bar -->
+<!-- Sign-in bar (compact, logged-in state) -->
 <div id="auth-bar" style="background:#fff;border-bottom:1px solid #e8e0f0;padding:8px 24px;display:flex;align-items:center;justify-content:flex-end;gap:10px;font-size:13px">
   <span id="auth-status" style="color:#888">Loading…</span>
   <button id="auth-btn" onclick="handleAuthBtn()" style="padding:6px 16px;border:1px solid #7744bb;border-radius:20px;background:#7744bb;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Sign in with Google</button>
+</div>
+
+<!-- Sign-in prompt banner (shown when not signed in) -->
+<div id="signin-banner" style="display:none;background:linear-gradient(135deg,#7744bb,#9955cc);color:#fff;padding:18px 24px;text-align:center">
+  <div style="max-width:600px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <div style="text-align:left">
+      <div style="font-size:15px;font-weight:700;margin-bottom:3px">💾 Save your progress across devices</div>
+      <div style="font-size:13px;color:#e0d0ff">Sign in with Google to save which puzzles you've started and completed — works on any device, any browser.</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+      <button onclick="handleAuthBtn()" style="background:#fff;color:#7744bb;border:none;border-radius:7px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">
+        Sign in with Google
+      </button>
+      <button onclick="document.getElementById('signin-banner').style.display='none';sessionStorage.setItem('signin_banner_dismissed','1')" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:7px;padding:10px 14px;font-size:13px;cursor:pointer;white-space:nowrap">
+        Maybe later
+      </button>
+    </div>
+  </div>
 </div>
 <div class="page-header">
   <div><h1>📖 Puzzle Directory</h1><p>Click any puzzle to solve it online</p></div>
@@ -606,6 +624,8 @@ function initAuth() {
       btn.textContent = 'Sign out';
       btn.style.background = '#fff';
       btn.style.color = '#7744bb';
+      const banner = document.getElementById('signin-banner');
+      if (banner) banner.style.display = 'none';
       // Load cloud progress
       try {
         _cloudProgress = await window.fbAuth.loadAllProgressCloud();
@@ -618,6 +638,9 @@ function initAuth() {
       btn.style.color = '#fff';
       _cloudProgress = {};
       renderDir();
+      // Show banner if not dismissed
+      const banner = document.getElementById('signin-banner');
+      if (banner && !sessionStorage.getItem('signin_banner_dismissed')) banner.style.display = 'block';
     }
   });
 }
