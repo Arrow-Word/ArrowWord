@@ -252,7 +252,7 @@ async function loadDir() {
   document.getElementById('dir-content').innerHTML = '<div class="loading">Loading puzzles…</div>';
   document.getElementById('size-tabs').innerHTML = '';
   try {
-    allPuzzles = await cloudGetPuzzles();
+    allPuzzles = await cloudGetIndex(); // fast — no grid data
     buildSizeTabs();
     renderDir();
   } catch(e) {
@@ -365,7 +365,7 @@ async function openSolver(id) {
   document.body.style.overflow = 'hidden';
   history.replaceState(null, '', '?id=' + id);
   try {
-    const entry = allPuzzles.find(p => p.id === id);
+    const entry = await cloudGetPuzzle(id);
     if (!entry || !entry.data) throw new Error('Puzzle data not found');
     document.getElementById('solver-title').textContent = entry.title;
     buildSolverGrid(entry.data);
