@@ -414,7 +414,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
     <!-- v13: text size moved below the buttons so the most-used controls stay
          on screen on small phones. This is a rare-use field. -->
     <div class="field" style="margin:10px 0 0;padding-top:8px;border-top:1px dashed #ddd;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <label style="margin:0;font-size:11px;color:#888;flex:1;min-width:160px">Clue text size (this clue only) — leave 0 to use default:</label>
+      <label style="margin:0;font-size:11px;color:#888;flex:1;min-width:160px">Clue text size (this clue only):</label>
       <input type="number" id="m-textsize" value="0" min="0" max="20" style="width:60px;padding:4px 6px;font-size:12px;border:1px solid #bbb;border-radius:4px">
     </div>
   </div>
@@ -763,7 +763,7 @@ function resetAddForm(){
   document.getElementById('m-clue').value='';
   document.getElementById('m-ans').value='';
   document.getElementById('m-dir').value='right';
-  document.getElementById('m-textsize').value='0';
+  document.getElementById('m-textsize').value=textSizePx;
   document.getElementById('m-warn').textContent='';
   document.getElementById('m-ok').textContent='Add clue';
   document.getElementById('m-ok').disabled=false;
@@ -813,7 +813,7 @@ function startEditClue(i){
   document.getElementById('m-clue').value=cl.clue||'';
   document.getElementById('m-ans').value=cl.ans||'';
   document.getElementById('m-dir').value=cl.dir;
-  document.getElementById('m-textsize').value=cl.textSize||0;
+  document.getElementById('m-textsize').value=cl.textSize&&cl.textSize>0?cl.textSize:textSizePx;
   document.getElementById('m-ok').textContent='Save changes';
   document.querySelectorAll('#dir-grid .dir-option').forEach(o=>o.classList.toggle('selected',o.dataset.dir===cl.dir));
   document.getElementById('m-warn').textContent='';
@@ -875,7 +875,7 @@ function addClue(){
   const ans=(document.getElementById('m-ans').value||'').replace(/[^a-zA-Z]/g,'').toUpperCase();
   const clue=document.getElementById('m-clue').value;
   const dir=document.getElementById('m-dir').value;
-  const tsv=parseInt(document.getElementById('m-textsize').value)||0;
+  const tsv=parseInt(document.getElementById('m-textsize').value)||textSizePx;
   if(!ans)return;
 
   if(editingClueIdx>=0){
