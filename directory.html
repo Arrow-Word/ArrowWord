@@ -110,6 +110,13 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
   .solve-input{display:none}
 }
 </style>
+  <script type="module">
+    import { onUserChanged, signInWithGoogle, signOutUser, getCurrentUser,
+             saveProgressCloud, loadProgressCloud, loadAllProgressCloud, clearProgressCloud }
+      from './firebase-auth.js';
+    window.fbAuth = { onUserChanged, signInWithGoogle, signOutUser, getCurrentUser,
+                      saveProgressCloud, loadProgressCloud, loadAllProgressCloud, clearProgressCloud };
+  </script>
 </head>
 <body>
 <nav>
@@ -119,6 +126,11 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
     <a href="directory.html" class="active">Puzzles</a>
   </div>
 </nav>
+<!-- Sign-in bar -->
+<div id="auth-bar" style="background:#fff;border-bottom:1px solid #e8e0f0;padding:8px 24px;display:flex;align-items:center;justify-content:flex-end;gap:10px;font-size:13px">
+  <span id="auth-status" style="color:#888">Loading…</span>
+  <button id="auth-btn" onclick="handleAuthBtn()" style="padding:6px 16px;border:1px solid #7744bb;border-radius:20px;background:#7744bb;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Sign in with Google</button>
+</div>
 <div class="page-header">
   <div><h1>📖 Puzzle Directory</h1><p>Click any puzzle to solve it online</p></div>
   <a href="builder.html" style="background:#7744bb;color:#fff;text-decoration:none;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:600">+ Create puzzle</a>
@@ -154,7 +166,7 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
         </div>
         <div class="solve-toolbar-right">
           <button class="green" onclick="window.print()">🖨 Print</button>
-          <button onclick="solverReveal()">Reveal</button>
+          
           <button class="warn" onclick="solverClear()">Clear</button>
         </div>
       </div>
@@ -571,6 +583,140 @@ function sZoomBy(d) { sSetZoom(sCurZoom + d); }
 function sZoomFit() { const wrap = document.getElementById('s-grid-wrap'); const tbl = document.getElementById('s-grid'); if (!wrap || !tbl || !tbl.offsetWidth) return; sSetZoom(Math.min(1, (wrap.clientWidth - 20) / tbl.offsetWidth)); }
 
 // ── Init ───────────────────────────────────────────────────────────────────────
+
+// ── Firebase auth integration ─────────────────────────────────────────────────
+let _cloudProgress = {}; // puzzleId -> {answers, complete}
+
+function handleAuthBtn() {
+  const user = window.fbAuth && window.fbAuth.getCurrentUser();
+  if (user) {
+    if (confirm('Sign out?')) window.fbAuth.signOutUser();
+  } else {
+    window.fbAuth && window.fbAuth.signInWithGoogle();
+  }
+}
+
+function initAuth() {
+  if (!window.fbAuth) { setTimeout(initAuth, 200); return; }
+  window.fbAuth.onUserChanged(async user => {
+    const bar = document.getElementById('auth-status');
+    const btn = document.getElementById('auth-btn');
+    if (user) {
+      bar.textContent = 'Signed in as ' + (user.displayName || user.email);
+      btn.textContent = 'Sign out';
+      btn.style.background = '#fff';
+      btn.style.color = '#7744bb';
+      // Load cloud progress
+      try {
+        _cloudProgress = await window.fbAuth.loadAllProgressCloud();
+        renderDir(); // refresh badges
+      } catch(e) { console.warn('Could not load cloud progress:', e); }
+    } else {
+      bar.textContent = 'Not signed in — progress saved on this device only';
+      btn.textContent = 'Sign in with Google';
+      btn.style.background = '#7744bb';
+      btn.style.color = '#fff';
+      _cloudProgress = {};
+      renderDir();
+    }
+  });
+}
+
+function getPuzzleStatus(id) {
+  // Cloud progress takes priority over localStorage
+  if (_cloudProgress[id]) {
+    return _cloudProgress[id].complete ? 'complete' : 'inprogress';
+  }
+  // Fall back to localStorage
+  const complete = JSON.parse(localStorage.getItem('arrowword_complete') || '{}');
+  if (complete[id]) return 'complete';
+  const progress = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
+  if (progress[id]) return 'inprogress';
+  return 'new';
+}
+
+async function saveProgress() {
+  if (!sCurPuzzleId) return;
+  const answers = {};
+  document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
+    if (inp.value) answers[inp.dataset.r + ',' + inp.dataset.c] = inp.value;
+  });
+  // Save to localStorage always
+  const all = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
+  all[sCurPuzzleId] = { answers, savedAt: Date.now() };
+  localStorage.setItem('arrowword_progress', JSON.stringify(all));
+  // Save to cloud if signed in
+  if (window.fbAuth && window.fbAuth.getCurrentUser()) {
+    try {
+      await window.fbAuth.saveProgressCloud(sCurPuzzleId, answers, false);
+      _cloudProgress[sCurPuzzleId] = { answers, complete: false };
+    } catch(e) { console.warn('Cloud save failed:', e); }
+  }
+  renderDir();
+  const btn = document.querySelector('.solve-toolbar-left .blue');
+  if (btn) { const orig = btn.textContent; btn.textContent = '✓ Saved!'; setTimeout(() => btn.textContent = orig, 1500); }
+}
+
+// Override sMaybeCelebrate to also save completion to cloud
+const _origCelebrate = sMaybeCelebrate;
+function sMaybeCelebrate() {
+  const inputs = document.querySelectorAll('#s-grid td.t-answer input');
+  if (!inputs.length) return;
+  for (let i = 0; i < inputs.length; i++) {
+    const r = +inputs[i].dataset.r, c = +inputs[i].dataset.c;
+    const w = sWords.find(x => x.cells.some(([a,b]) => a===r && b===c));
+    if (!w) return;
+    const idx = w.cells.findIndex(([a,b]) => a===r && b===c);
+    if ((inputs[i].value||'').toUpperCase() !== w.ans[idx]) return;
+  }
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  sActive = null; sHighlight();
+  // Mark complete
+  if (sCurPuzzleId) {
+    const complete = JSON.parse(localStorage.getItem('arrowword_complete') || '{}');
+    complete[sCurPuzzleId] = Date.now();
+    localStorage.setItem('arrowword_complete', JSON.stringify(complete));
+    const prog = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
+    delete prog[sCurPuzzleId];
+    localStorage.setItem('arrowword_progress', JSON.stringify(prog));
+    // Cloud
+    if (window.fbAuth && window.fbAuth.getCurrentUser()) {
+      const finalAnswers = {};
+      document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
+        if (inp.value) finalAnswers[inp.dataset.r+','+inp.dataset.c] = inp.value;
+      });
+      window.fbAuth.saveProgressCloud(sCurPuzzleId, finalAnswers, true).then(() => {
+        _cloudProgress[sCurPuzzleId] = { complete: true };
+      }).catch(()=>{});
+    } else {
+      _cloudProgress[sCurPuzzleId] = { complete: true };
+    }
+    renderDir();
+  }
+  document.getElementById('celebrate').style.display = 'flex';
+}
+
+// Load cloud progress when opening a puzzle
+const _origOpenSolver = openSolver;
+async function openSolver(id) {
+  await _origOpenSolver(id);
+  // Restore cloud progress if signed in and no local progress loaded
+  if (window.fbAuth && window.fbAuth.getCurrentUser() && _cloudProgress[id]) {
+    const prog = _cloudProgress[id];
+    if (prog.answers && !prog.complete) {
+      setTimeout(() => {
+        Object.entries(prog.answers).forEach(([key, val]) => {
+          const [r, c] = key.split(',').map(Number);
+          const inp = sGetInp(r, c);
+          if (inp && !inp.value) inp.value = val;
+        });
+      }, 200);
+    }
+  }
+}
+
+initAuth();
+
 loadDir();
 (function () { const id = new URLSearchParams(location.search).get('id'); if (id) setTimeout(() => openSolver(id), 300); })();
 </script>

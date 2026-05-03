@@ -1,131 +1,100 @@
-// cloud-storage.js — v19.1
-const GH_OWNER  = 'arrow-word';
-const GH_REPO   = 'ArrowWord';
-const GH_BRANCH = 'main';
-const GH_FILE   = 'puzzles.json';
+// cloud-storage.js — v18
+// ══════════════════════════════════════════════════════════════════════════════
+// TWO-BIN ARCHITECTURE for fast loading:
+//
+//  BIN 1 (INDEX_BIN_ID): Tiny index — only title, size, date, id.
+//                        Directory loads this only. < 2KB for 100 puzzles.
+//                        Loads in under 1 second.
+//
+//  BIN 2 (DATA_BIN_ID):  Full puzzle data with grid/clues/answers.
+//                        Only fetched when someone opens a puzzle to solve.
+//
+// SETUP:
+//  1. Your existing bin becomes DATA_BIN_ID (already filled in below).
+//  2. Create a SECOND new bin at jsonbin.io with content [] and save it.
+//  3. Paste that new bin's ID as INDEX_BIN_ID below.
+//  Same API key works for both bins.
+// ══════════════════════════════════════════════════════════════════════════════
 
-const CDN_URL = `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/${GH_FILE}`;
-const API_URL = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+const JSONBIN_API_KEY = '$2a$10$Qz35tUrG18iwK4GJM12MwO3sr0LzpH5/M3J21usrclq50iWcvHBp6';
+const INDEX_BIN_ID    = 'PASTE_NEW_INDEX_BIN_ID_HERE'; // new empty bin — paste id here
+const DATA_BIN_ID     = '69f6d39aaaba88219765b85a';    // your existing bin
 
-function ghGetToken()   { return localStorage.getItem('gh_pat') || ''; }
-function ghSaveToken(t) { localStorage.setItem('gh_pat', t.trim()); }
+const INDEX_URL   = 'https://api.jsonbin.io/v3/b/' + INDEX_BIN_ID;
+const DATA_URL    = 'https://api.jsonbin.io/v3/b/' + DATA_BIN_ID;
+const H_READ      = { 'X-Master-Key': JSONBIN_API_KEY };
+const H_WRITE     = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY, 'X-Bin-Versioning': 'false' };
 
+async function _get(url) {
+  const res = await fetch(url + '/latest', { headers: H_READ });
+  if (!res.ok) throw new Error('Read error ' + res.status);
+  const d = await res.json();
+  return Array.isArray(d.record) ? d.record : (d.record || []);
+}
+
+async function _put(url, data) {
+  const res = await fetch(url, { method: 'PUT', headers: H_WRITE, body: JSON.stringify(data) });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message || 'Write error ' + res.status); }
+}
+
+// Fast — only loads titles/sizes, no grid data
 async function cloudGetIndex() {
-  const res = await fetch(CDN_URL + '?v=' + Date.now());
-  if (res.status === 404) return [];
-  if (!res.ok) throw new Error('Could not load puzzles (' + res.status + ')');
-  const list = await res.json();
-  return list.map(p => ({ id:p.id, title:p.title, publishedAt:p.publishedAt, publishedAtMs:p.publishedAtMs, rows:p.rows, cols:p.cols }));
+  try {
+    const idx = await _get(INDEX_URL);
+    return Array.isArray(idx) ? idx : [];
+  } catch(e) {
+    // If index bin not set up yet, fall back to full data (slower but works)
+    console.warn('Index bin not available, falling back to full data');
+    const full = await _get(DATA_URL);
+    return (Array.isArray(full) ? full : []).map(p => ({ id:p.id, title:p.title, publishedAt:p.publishedAt, publishedAtMs:p.publishedAtMs, rows:p.rows, cols:p.cols }));
+  }
 }
 
+// Only called when a user opens a puzzle to solve
 async function cloudGetPuzzle(id) {
-  const res = await fetch(CDN_URL + '?v=' + Date.now());
-  if (!res.ok) throw new Error('Could not load puzzle');
-  const list = await res.json();
-  return list.find(p => p.id === id) || null;
+  const all = await _get(DATA_URL);
+  return (Array.isArray(all) ? all : []).find(p => p.id === id) || null;
 }
 
+// All puzzles with full data (used by delete page and builder)
 async function cloudGetPuzzles() {
-  const res = await fetch(CDN_URL + '?v=' + Date.now());
-  if (res.status === 404) return [];
-  if (!res.ok) throw new Error('Could not load puzzles');
-  return res.json();
-}
-
-async function _ghWrite(list, token) {
-  // Always fetch a fresh SHA immediately before writing
-  const infoRes = await fetch(API_URL + '?ref=' + GH_BRANCH + '&t=' + Date.now(), {
-    headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }
-  });
-  let sha = null;
-  if (infoRes.ok) {
-    const info = await infoRes.json();
-    sha = info.sha;
-  } else if (infoRes.status === 401 || infoRes.status === 403) {
-    localStorage.removeItem('gh_pat');
-    throw new Error('GitHub token rejected. Token cleared — try publishing again.');
-  } else if (infoRes.status !== 404) {
-    throw new Error('GitHub API error ' + infoRes.status);
-  }
-
-  const body = {
-    message: 'Update puzzles.json',
-    branch: GH_BRANCH,
-    content: btoa(unescape(encodeURIComponent(JSON.stringify(list, null, 2))))
-  };
-  if (sha) body.sha = sha;
-
-  const writeRes = await fetch(API_URL, {
-    method: 'PUT',
-    headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!writeRes.ok) {
-    const e = await writeRes.json().catch(()=>({}));
-    if (writeRes.status === 401 || writeRes.status === 403) {
-      localStorage.removeItem('gh_pat');
-      throw new Error('GitHub token rejected. Token cleared — try publishing again.');
-    }
-    if (writeRes.status === 409 || (e.message && e.message.includes('does not match'))) {
-      throw new Error('SHA conflict — please try publishing again immediately.');
-    }
-    throw new Error(e.message || 'GitHub write error ' + writeRes.status);
-  }
-}
-
-async function _getTokenOrPrompt() {
-  let token = ghGetToken();
-  if (token) return token;
-  return new Promise(resolve => {
-    const bg = document.createElement('div');
-    bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-    bg.innerHTML = `<div style="background:#fff;border-radius:10px;padding:24px;max-width:440px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.2)">
-      <h3 style="font-size:16px;font-weight:700;color:#443366;margin-bottom:8px">GitHub token needed</h3>
-      <p style="font-size:13px;color:#555;line-height:1.6;margin-bottom:12px">
-        <strong>Get one:</strong><br>
-        1. <a href="https://github.com/settings/tokens/new" target="_blank" style="color:#7744bb">github.com/settings/tokens/new</a><br>
-        2. Name it, set No expiration, tick <strong>repo</strong>, Generate &amp; copy
-      </p>
-      <input id="_gh_tok" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-        style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #bbb;border-radius:5px;margin-bottom:10px">
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button id="_gh_cancel" style="padding:8px 16px;font-size:13px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer">Cancel</button>
-        <button id="_gh_save" style="padding:8px 16px;font-size:13px;border:none;border-radius:5px;background:#7744bb;color:#fff;font-weight:600;cursor:pointer">Save &amp; continue</button>
-      </div>
-    </div>`;
-    document.body.appendChild(bg);
-    document.getElementById('_gh_save').onclick = () => {
-      const val = document.getElementById('_gh_tok').value.trim();
-      if (!val) { alert('Please paste your token.'); return; }
-      ghSaveToken(val);
-      document.body.removeChild(bg);
-      resolve(val);
-    };
-    document.getElementById('_gh_cancel').onclick = () => { document.body.removeChild(bg); resolve(null); };
-  });
+  const all = await _get(DATA_URL);
+  return Array.isArray(all) ? all : [];
 }
 
 async function cloudPublishPuzzle(title, data) {
-  const token = await _getTokenOrPrompt();
-  if (!token) return null;
-  const list = await cloudGetPuzzles();
   const id = 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
-  const entry = { id, title, publishedAt: new Date().toLocaleDateString('en-ZA'), publishedAtMs: Date.now(), rows: data.rows, cols: data.cols, data };
-  const existing = list.findIndex(p => p.title === title);
-  if (existing >= 0) { entry.id = list[existing].id; list[existing] = entry; } else list.unshift(entry);
-  await _ghWrite(list, token);
-  return entry.id;
+  const now = new Date();
+  const publishedAt = now.toLocaleDateString('en-ZA');
+  const publishedAtMs = now.getTime();
+
+  // Read both bins in parallel for speed
+  const [indexList, dataList] = await Promise.all([cloudGetIndex(), cloudGetPuzzles()]);
+
+  const existingIdx = indexList.findIndex(p => p.title === title);
+  const finalId = existingIdx >= 0 ? indexList[existingIdx].id : id;
+
+  const idxEntry = { id: finalId, title, publishedAt, publishedAtMs, rows: data.rows, cols: data.cols };
+  if (existingIdx >= 0) indexList[existingIdx] = idxEntry; else indexList.unshift(idxEntry);
+
+  const dataEntry = { id: finalId, title, publishedAt, publishedAtMs, rows: data.rows, cols: data.cols, data };
+  const existingData = dataList.findIndex(p => p.title === title);
+  if (existingData >= 0) dataList[existingData] = dataEntry; else dataList.unshift(dataEntry);
+
+  // Write both bins in parallel
+  await Promise.all([_put(INDEX_URL, indexList), _put(DATA_URL, dataList)]);
+  return finalId;
 }
 
 async function cloudRemovePuzzle(id) {
-  const token = await _getTokenOrPrompt();
-  if (!token) return;
-  const list = await cloudGetPuzzles();
-  await _ghWrite(list.filter(p => p.id !== id), token);
+  const [indexList, dataList] = await Promise.all([cloudGetIndex(), cloudGetPuzzles()]);
+  await Promise.all([
+    _put(INDEX_URL, indexList.filter(p => p.id !== id)),
+    _put(DATA_URL, dataList.filter(p => p.id !== id)),
+  ]);
 }
 
 async function cloudSavePuzzles(list) {
-  const token = await _getTokenOrPrompt();
-  if (!token) return;
-  await _ghWrite(list, token);
+  const indexList = list.map(p => ({ id:p.id, title:p.title, publishedAt:p.publishedAt, publishedAtMs:p.publishedAtMs, rows:p.rows, cols:p.cols }));
+  await Promise.all([_put(INDEX_URL, indexList), _put(DATA_URL, list)]);
 }
