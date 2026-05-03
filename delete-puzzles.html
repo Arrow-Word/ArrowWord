@@ -126,14 +126,16 @@ function renderList(){
   list.innerHTML='';
   puzzles.forEach(p=>{
     const row=document.createElement('div');row.className='prow';row.dataset.id=p.id;
-    const size=p.cols&&p.rows?p.cols+'×'+p.rows:'';
+    const size=p.cols&&p.rows?p.cols+'\u00d7'+p.rows:'';
+    const title=p.title||'(Untitled puzzle)';
+    const safetitle=title.replace(/'/g,"\\'");
     row.innerHTML=`
       <input type="checkbox" class="pcheck" data-id="${p.id}" onchange="onCheck()">
       <div class="prow-info">
-        <div class="prow-title">${escHtml(p.title)}</div>
-        <div class="prow-meta">Published ${p.publishedAt}${size?'<span class="prow-size">'+size+'</span>':''}</div>
+        <div class="prow-title">${escHtml(title)}</div>
+        <div class="prow-meta">Published ${p.publishedAt||'unknown'}${size?'<span class="prow-size">'+size+'</span>':''}</div>
       </div>
-      <button class="btn-del-one" onclick="deleteOne('${p.id}','${escHtml(p.title).replace(/'/g,"\\'")}')">Delete</button>`;
+      <button class="btn-del-one" onclick="deleteOne('${p.id}','${safetitle}')">Delete</button>`;
     row.querySelector('.pcheck').addEventListener('change',function(){row.classList.toggle('checked',this.checked);});
     list.appendChild(row);
   });
@@ -144,11 +146,13 @@ function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').
 
 function onCheck(){
   const checked=document.querySelectorAll('.pcheck:checked').length;
-  document.getElementById('sel-count').textContent=checked;
-  document.getElementById('btn-del-sel').disabled=checked===0;
+  const countEl=document.getElementById('sel-count');
+  const btn=document.getElementById('btn-del-sel');
+  if(countEl)countEl.textContent=checked;
+  if(btn)btn.disabled=checked===0;
   const all=document.querySelectorAll('.pcheck').length;
-  document.getElementById('select-all').indeterminate=checked>0&&checked<all;
-  document.getElementById('select-all').checked=checked===all&&all>0;
+  const selAll=document.getElementById('select-all');
+  if(selAll){selAll.indeterminate=checked>0&&checked<all;selAll.checked=checked===all&&all>0;}
 }
 
 function toggleAll(checked){
@@ -171,22 +175,19 @@ async function deleteOne(id,title){
 async function deleteSelected(){
   const checked=[...document.querySelectorAll('.pcheck:checked')].map(cb=>cb.dataset.id);
   if(!checked.length)return;
-  const names=checked.map(id=>{const p=puzzles.find(x=>x.id===id);return p?'"'+p.title+'"':id;});
+  const names=checked.map(id=>{const p=puzzles.find(x=>x.id===id);return p?('"'+(p.title||'Untitled')+'"'):id;});
   if(!confirm('Delete '+checked.length+' puzzle'+(checked.length===1?'':'s')+'?\n\n'+names.join('\n')+'\n\nThis cannot be undone.'))return;
   const btn=document.getElementById('btn-del-sel');
-  btn.textContent='⏳ Deleting…';btn.disabled=true;
+  btn.innerHTML='⏳ Deleting…';btn.disabled=true;
   try{
-    // Delete one by one to keep the cloud state consistent
     for(const id of checked){
       await cloudRemovePuzzle(id);
       puzzles=puzzles.filter(p=>p.id!==id);
     }
     renderList();
-    btn.textContent='🗑 Delete selected (0)';
   }catch(e){
     alert('Error during deletion: '+e.message+'\n\nSome puzzles may have been deleted. Refresh to see current state.');
     btn.disabled=false;
-    btn.textContent='🗑 Delete selected';
     await loadPuzzles();
   }
 }
