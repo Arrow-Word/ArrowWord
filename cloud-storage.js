@@ -33,26 +33,18 @@ async function cloudGetPuzzles() {
 }
 
 async function _ghWrite(list, token) {
-  // Always fetch a fresh SHA immediately before writing
   const infoRes = await fetch(API_URL + '?ref=' + GH_BRANCH + '&t=' + Date.now(), {
     headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }
   });
   let sha = null;
-  if (infoRes.ok) {
-    const info = await infoRes.json();
-    sha = info.sha;
-  } else if (infoRes.status === 401 || infoRes.status === 403) {
+  if (infoRes.ok) { const info = await infoRes.json(); sha = info.sha; }
+  else if (infoRes.status === 401 || infoRes.status === 403) {
     localStorage.removeItem('gh_pat');
     throw new Error('GitHub token rejected. Token cleared — try publishing again.');
-  } else if (infoRes.status !== 404) {
-    throw new Error('GitHub API error ' + infoRes.status);
-  }
+  } else if (infoRes.status !== 404) { throw new Error('GitHub API error ' + infoRes.status); }
 
-  const body = {
-    message: 'Update puzzles.json',
-    branch: GH_BRANCH,
-    content: btoa(unescape(encodeURIComponent(JSON.stringify(list, null, 2))))
-  };
+  const body = { message: 'Update puzzles.json', branch: GH_BRANCH,
+    content: btoa(unescape(encodeURIComponent(JSON.stringify(list, null, 2)))) };
   if (sha) body.sha = sha;
 
   const writeRes = await fetch(API_URL, {
@@ -65,9 +57,6 @@ async function _ghWrite(list, token) {
     if (writeRes.status === 401 || writeRes.status === 403) {
       localStorage.removeItem('gh_pat');
       throw new Error('GitHub token rejected. Token cleared — try publishing again.');
-    }
-    if (writeRes.status === 409 || (e.message && e.message.includes('does not match'))) {
-      throw new Error('SHA conflict — please try publishing again immediately.');
     }
     throw new Error(e.message || 'GitHub write error ' + writeRes.status);
   }
