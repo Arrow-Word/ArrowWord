@@ -177,7 +177,7 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
     <a style="color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="index.html">Home</a>
     <a style="color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="directory.html">Puzzles</a>
     <a style="background:rgba(255,255,255,0.2);color:#fff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="builder.html">Builder</a>
-    <span style="color:#e8d8ff;font-size:12px;opacity:0.7">v17</span>
+    
   </div>
 </nav>
 <script src="cloud-storage.js"></script>
@@ -194,7 +194,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-    title="Click for change history">v14 ▾</button>
+    title="Click for change history">v17 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
@@ -1322,8 +1322,8 @@ function renderSavedList(){
       <button class="tool-btn" style="font-size:11px;padding:3px 8px" onclick="loadPuzzle(${i})">Load</button>
       <button class="tool-btn green" style="font-size:11px;padding:3px 8px" onclick="exportSaved(${i})">Export file</button>
       <button class="tool-btn" style="font-size:11px;padding:3px 8px;background:#ede0ff;color:#443366;border-color:#9966cc" onclick="publishSavedToWeb(${i})">🌐 Web</button>
-      <button class="tool-btn" style="font-size:11px;padding:3px 8px;background:#fff0f0;color:#c00;border-color:#f4a8a8" onclick="deleteFromDir(${i})">🗑 Dir</button>
-      <button class="tool-btn warn" style="font-size:11px;padding:3px 8px" onclick="deletePuzzle(${i})">Delete</button>
+      <button class="tool-btn" style="font-size:11px;padding:3px 8px;background:#fff0f0;color:#c00;border-color:#f4a8a8" onclick="deleteFromDir(${i})">Delete from Directory</button>
+      <button class="tool-btn warn" style="font-size:11px;padding:3px 8px" onclick="deletePuzzle(${i})">Delete file</button>
     </div>`;
   }).join('');
 }
@@ -2088,8 +2088,24 @@ document.querySelectorAll('.modal-bg').forEach(function(m){
 async function publishToWeb(overrideName){
   const name=overrideName||(document.getElementById('puzzle-name').value||'').trim();
   if(!name){alert('Please give your puzzle a name first.\n\nType a name in the puzzle name field.');return;}
-  const hasContent=G.some(row=>row.some(cell=>cell.t!=='empty'));
-  if(!hasContent){alert('The puzzle is empty — add some clues first.');return;}
+  // Completeness check
+  const issues=[];
+  let hasClue=false;
+  for(let r=0;r<R;r++){for(let c=0;c<C;c++){
+    const cell=G[r][c];
+    if(cell.t==='clue'){
+      hasClue=true;
+      cell.clues.forEach((cl,i)=>{
+        if(!cl.clue||!cl.clue.trim()) issues.push('Cell [row '+(r+1)+', col '+(c+1)+'] clue '+(i+1)+' has no clue text.');
+        if(!cl.ans||!cl.ans.trim()) issues.push('Cell [row '+(r+1)+', col '+(c+1)+'] clue '+(i+1)+' has no answer.');
+      });
+    }
+    if(cell.t==='answer'&&(!cell.answerOf||!cell.answerOf.letter)){
+      issues.push('Cell [row '+(r+1)+', col '+(c+1)+'] answer cell is empty.');
+    }
+  }}
+  if(!hasClue){alert('The puzzle has no clues — add some clues first.');return;}
+  if(issues.length){alert('Cannot publish — the puzzle has '+issues.length+' incomplete field'+(issues.length===1?'':'s')+':\n\n'+issues.slice(0,5).join('\n')+(issues.length>5?'\n…and '+(issues.length-5)+' more.':''));return;}
   if(!confirm('Publish "'+name+'" to the web directory?\n\nAnyone visiting the site will be able to solve it.'))return;
   const btn=event&&event.target;const origText=btn?btn.textContent:'';
   if(btn){btn.textContent='⏳ Publishing…';btn.disabled=true;}
