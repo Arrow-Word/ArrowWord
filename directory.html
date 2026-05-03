@@ -110,12 +110,22 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
   .solve-input{display:none}
 }
 </style>
-  <script type="module">
-    import { onUserChanged, signInWithGoogle, signOutUser, getCurrentUser,
-             saveProgressCloud, loadProgressCloud, loadAllProgressCloud, clearProgressCloud }
-      from './firebase-auth.js';
-    window.fbAuth = { onUserChanged, signInWithGoogle, signOutUser, getCurrentUser,
-                      saveProgressCloud, loadProgressCloud, loadAllProgressCloud, clearProgressCloud };
+  <!-- Firebase loaded as regular scripts, not modules -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyA-QbwUgprGtna18gCHKMHfctmT9lcVBFA",
+      authDomain: "arrowword.firebaseapp.com",
+      projectId: "arrowword",
+      storageBucket: "arrowword.firebasestorage.app",
+      messagingSenderId: "523122165795",
+      appId: "1:523122165795:web:69e308770df7fc75114996"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const _fbAuth = firebase.auth();
+    const _fbDb   = firebase.firestore();
   </script>
 </head>
 <body>
@@ -606,17 +616,17 @@ function sZoomFit() { const wrap = document.getElementById('s-grid-wrap'); const
 let _cloudProgress = {}; // puzzleId -> {answers, complete}
 
 function handleAuthBtn() {
-  const user = window.fbAuth && window.fbAuth.getCurrentUser();
+  const user = _fbAuth.currentUser;
   if (user) {
-    if (confirm('Sign out?')) window.fbAuth.signOutUser();
+    if (confirm('Sign out?')) _fbAuth.signOut();
   } else {
-    window.fbAuth && window.fbAuth.signInWithGoogle();
+    _fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
   }
 }
 
 function initAuth() {
   if (!window.fbAuth) { setTimeout(initAuth, 200); return; }
-  window.fbAuth.onUserChanged(async user => {
+  _fbAuth.onAuthStateChanged(async user => {
     const bar = document.getElementById('auth-status');
     const btn = document.getElementById('auth-btn');
     if (user) {
@@ -628,7 +638,10 @@ function initAuth() {
       if (banner) banner.style.display = 'none';
       // Load cloud progress
       try {
-        _cloudProgress = await window.fbAuth.loadAllProgressCloud();
+        _cloudProgress = await (async()=>{
+        const snaps = await _fbDb.collection('users').doc(_fbAuth.currentUser.uid).collection('progress').get();
+        const r={};snaps.forEach(s=>{r[s.id]=s.data();});return r;
+      })();
         renderDir(); // refresh badges
       } catch(e) { console.warn('Could not load cloud progress:', e); }
     } else {
@@ -669,9 +682,9 @@ async function saveProgress() {
   all[sCurPuzzleId] = { answers, savedAt: Date.now() };
   localStorage.setItem('arrowword_progress', JSON.stringify(all));
   // Save to cloud if signed in
-  if (window.fbAuth && window.fbAuth.getCurrentUser()) {
+  if (_fbAuth.currentUser) {
     try {
-      await window.fbAuth.saveProgressCloud(sCurPuzzleId, answers, false);
+      await _fbDb.collection('users').doc(_fbAuth.currentUser.uid).collection('progress').doc(sCurPuzzleId).set({answers,complete:false,savedAt:Date.now(),puzzleId:sCurPuzzleId});
       _cloudProgress[sCurPuzzleId] = { answers, complete: false };
     } catch(e) { console.warn('Cloud save failed:', e); }
   }
@@ -703,12 +716,12 @@ function sMaybeCelebrate() {
     delete prog[sCurPuzzleId];
     localStorage.setItem('arrowword_progress', JSON.stringify(prog));
     // Cloud
-    if (window.fbAuth && window.fbAuth.getCurrentUser()) {
+    if (_fbAuth.currentUser) {
       const finalAnswers = {};
       document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
         if (inp.value) finalAnswers[inp.dataset.r+','+inp.dataset.c] = inp.value;
       });
-      window.fbAuth.saveProgressCloud(sCurPuzzleId, finalAnswers, true).then(() => {
+      _fbDb.collection('users').doc(_fbAuth.currentUser.uid).collection('progress').doc(sCurPuzzleId).set({answers:finalAnswers,complete:true,savedAt:Date.now(),puzzleId:sCurPuzzleId}).then(() => {
         _cloudProgress[sCurPuzzleId] = { complete: true };
       }).catch(()=>{});
     } else {
@@ -724,7 +737,7 @@ const _origOpenSolver = openSolver;
 async function openSolver(id) {
   await _origOpenSolver(id);
   // Restore cloud progress if signed in and no local progress loaded
-  if (window.fbAuth && window.fbAuth.getCurrentUser() && _cloudProgress[id]) {
+  if (_fbAuth.currentUser && _cloudProgress[id]) {
     const prog = _cloudProgress[id];
     if (prog.answers && !prog.complete) {
       setTimeout(() => {
