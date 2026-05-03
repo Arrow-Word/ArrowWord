@@ -261,7 +261,7 @@ async function loadDir() {
 }
 
 function getSizeLabel(p) {
-  return (p.cols && p.rows) ? p.cols + '×' + p.rows : 'Unknown';
+  return (p.cols && p.rows) ? p.cols + '×' + p.rows : '?×?';
 }
 
 function buildSizeTabs() {
@@ -295,13 +295,14 @@ function renderDir() {
   const q = (document.getElementById('search').value || '').toLowerCase();
   const sort = document.getElementById('sort-by').value;
   let list = allPuzzles.filter(p => {
-    const matchQ = !q || p.title.toLowerCase().includes(q);
+    if (!p || !p.id) return false; // skip corrupt entries
+    const matchQ = !q || (p.title || '').toLowerCase().includes(q);
     const matchSize = activeSize === 'all' || getSizeLabel(p) === activeSize;
     return matchQ && matchSize;
   });
   if (sort === 'newest') list = [...list].sort((a, b) => (b.publishedAtMs || 0) - (a.publishedAtMs || 0));
   else if (sort === 'oldest') list = [...list].sort((a, b) => (a.publishedAtMs || 0) - (b.publishedAtMs || 0));
-  else list = [...list].sort((a, b) => a.title.localeCompare(b.title)); // alpha default
+  else list = [...list].sort((a, b) => (a.title || '').localeCompare(b.title || '')); // alpha default
   document.getElementById('count-line').textContent = list.length + ' puzzle' + (list.length === 1 ? '' : 's');
   const content = document.getElementById('dir-content');
   if (!list.length) {
@@ -323,6 +324,7 @@ function renderDir() {
 }
 
 function cardHtml(p) {
+  const title = p.title || '(Untitled puzzle)';
   const status = getPuzzleStatus(p.id);
   const badge = status === 'complete'
     ? '<span class="pcard-badge badge-complete">✓ Completed</span>'
@@ -331,8 +333,8 @@ function cardHtml(p) {
     : '';
   return `<div class="pcard">
     ${badge}
-    <div class="pcard-title">${escHtml(p.title)}</div>
-    <div class="pcard-meta">Published ${p.publishedAt}</div>
+    <div class="pcard-title">${escHtml(title)}</div>
+    <div class="pcard-meta">Published ${p.publishedAt || ''}</div>
     ${p.cols && p.rows ? `<div class="pcard-size">${p.cols}×${p.rows} grid</div>` : ''}
     <button class="btn-solve" onclick="openSolver('${p.id}')">
       ${status === 'inprogress' ? '▶ Continue solving' : status === 'complete' ? '↺ Solve again' : 'Solve →'}
