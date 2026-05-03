@@ -1,40 +1,5 @@
 [
   {
-    "id": "p_mopszu0y_3k8ku",
-    "title": "Vernon Test",
-    "publishedAt": "2026/05/03",
-    "publishedAtMs": 1777814741698,
-    "rows": 9,
-    "cols": 9,
-    "data": {
-      "rows": 9,
-      "cols": 9,
-      "cells": [
-        {
-          "r": 0,
-          "c": 0,
-          "t": "clue",
-          "clues": [
-            {
-              "clue": "Vernon's name",
-              "ans": "VERNON",
-              "dir": "right-down",
-              "textSize": 0
-            },
-            {
-              "clue": "Peter's name",
-              "ans": "PETER",
-              "dir": "down-right",
-              "textSize": 0
-            }
-          ]
-        }
-      ],
-      "cellSizePx": 64,
-      "textSizePx": 12
-    }
-  },
-  {
     "id": "p_mopsn3rt_twmub",
     "title": "9x9 04",
     "publishedAt": "2026/05/03",
