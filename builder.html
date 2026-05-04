@@ -6,10 +6,10 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
-<title>Puzzle Builder v17 — Arrow Word Puzzles</title>
+<title>Puzzle Builder v18 — Arrow Word Puzzles</title>
 <!-- Arrow Word Puzzle Builder
      ════════════════════════════════════════════════
-     CURRENT VERSION: v17
+     CURRENT VERSION: v18
      ════════════════════════════════════════════════
      CHANGELOG:
      v17 - Fixed cloud storage (JSONBin) not visible cross-device/browser.
@@ -180,13 +180,14 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
     <a style="color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="index.html">Home</a>
     <a style="color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="directory.html">Puzzles</a>
     <a style="background:rgba(255,255,255,0.2);color:#fff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="builder.html">Builder</a>
+    <span style="color:#e8d8ff;font-size:12px;opacity:0.7">v18</span>
     
   </div>
 </nav>
 <script src="cloud-storage.js"></script>
 <script>
 const BUILDER_PASSWORD = 'arrowword2024';
-const BUILDER_UNLOCK_KEY = 'builder_unlocked_v17';
+const BUILDER_UNLOCK_KEY = 'builder_unlocked_v18';
 function checkBuilderPwd(){
   const val=document.getElementById('builder-pwd').value;
   if(val===BUILDER_PASSWORD){sessionStorage.setItem(BUILDER_UNLOCK_KEY,'1');document.getElementById('builder-lock').style.display='none';document.getElementById('builder-pwd').value='';}
@@ -197,7 +198,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-    title="Click for change history">v17 ▾</button>
+    title="Click for change history">v18 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
