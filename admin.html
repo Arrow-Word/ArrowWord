@@ -2,73 +2,172 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ArrowWord Admin Tool</title>
+<title>Admin Dashboard — Arrow Word Puzzles</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;background:#1a0e2e;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-.box{background:#2a1a44;border:1px solid #7744bb;border-radius:12px;padding:32px;width:500px;max-width:95vw}
-h1{font-size:20px;font-weight:700;color:#e8d8ff;margin-bottom:8px}
-p{font-size:13px;color:#b8a0e8;line-height:1.6;margin-bottom:16px}
-.warn{background:#3a0e0e;border:1px solid #c00;border-radius:6px;padding:12px;font-size:12px;color:#f99;margin-bottom:20px;line-height:1.5}
-button{width:100%;padding:12px;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px}
-.btn-clear{background:#dc3545;color:#fff}
+body{font-family:Arial,sans-serif;background:#f5f0ff;color:#222;min-height:100vh}
+nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.nav-brand{font-size:20px;font-weight:700;text-decoration:none;color:#fff}
+.nav-brand span{color:#e8d8ff}
+#lock-screen{position:fixed;inset:0;background:#f5f0ff;z-index:500;display:flex;align-items:center;justify-content:center;padding:24px}
+.lock-box{background:#fff;border-radius:12px;border:1px solid #e0d8f0;padding:32px;width:360px;max-width:95vw;text-align:center;box-shadow:0 4px 24px rgba(119,68,187,0.12)}
+.lock-box h2{font-size:18px;font-weight:700;color:#443366;margin-bottom:8px}
+.lock-box p{font-size:13px;color:#888;margin-bottom:20px}
+.lock-box input{width:100%;padding:10px 14px;font-size:15px;border:1px solid #bbb;border-radius:6px;margin-bottom:10px;text-align:center;letter-spacing:2px}
+.lock-box input:focus{outline:none;border-color:#7744bb}
+.lock-box button{width:100%;background:#7744bb;color:#fff;border:none;border-radius:6px;padding:12px;font-size:15px;font-weight:600;cursor:pointer}
+#main{display:none;max-width:1100px;margin:0 auto;padding:24px}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:#fff;border:1px solid #e0d8f0;border-radius:10px;padding:18px;text-align:center}
+.stat-num{font-size:32px;font-weight:700;color:#7744bb}
+.stat-label{font-size:12px;color:#888;margin-top:4px}
+h2{font-size:18px;font-weight:700;color:#443366;margin-bottom:12px;margin-top:8px}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e0d8f0;margin-bottom:28px;font-size:13px}
+th{background:#7744bb;color:#fff;padding:10px 14px;text-align:left;font-size:13px}
+td{padding:10px 14px;border-bottom:1px solid #f0ecff}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#faf8ff}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.b-complete{background:#d4edda;color:#155724}
+.b-progress{background:#fff3cd;color:#856404}
+.loading{color:#aaa;font-style:italic;padding:20px;text-align:center}
+.clear-section{background:#fff;border:1px solid #f4a8a8;border-radius:8px;padding:16px;margin-bottom:24px}
+.clear-section h3{font-size:14px;font-weight:700;color:#900;margin-bottom:8px}
+.btn-clear{background:#dc3545;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
 .btn-clear:hover{background:#bb2d3b}
-.btn-clear:disabled{opacity:.4;cursor:default}
-.btn-back{background:#7744bb;color:#fff;text-decoration:none;display:block;text-align:center;border-radius:6px;padding:12px;font-size:15px;font-weight:600}
-.btn-back:hover{background:#6633aa}
-.log{background:#0d0820;border:1px solid #443366;border-radius:6px;padding:12px;font-size:12px;color:#b8a0e8;margin-top:16px;min-height:60px;line-height:1.8;word-break:break-all}
-.log .ok{color:#6fcf6f}
-.log .err{color:#f99}
-.log .info{color:#aaa}
 </style>
 </head>
 <body>
-<div class="box">
-  <h1>🔧 ArrowWord Admin Tool</h1>
-  <p>Use this to clear all puzzles from the cloud directory and start fresh.</p>
-  <div class="warn">
-    ⚠️ <strong>This will permanently delete ALL puzzles from the public directory.</strong><br>
-    Your locally saved puzzles in the builder are NOT affected — only the published web directory is cleared.
+<nav>
+  <a class="nav-brand" href="index.html">Arrow<span>Word</span> <span style="font-size:13px;opacity:0.7">Admin</span></a>
+  <a href="directory.html" style="color:#e8d8ff;font-size:13px;text-decoration:none">← Back to puzzles</a>
+</nav>
+
+<div id="lock-screen">
+  <div class="lock-box">
+    <div style="font-size:40px;margin-bottom:12px">🔐</div>
+    <h2>Admin Dashboard</h2>
+    <p>Enter password to view user stats</p>
+    <input type="password" id="pwd" placeholder="Password" onkeydown="if(event.key==='Enter')checkPwd()">
+    <button onclick="checkPwd()">Enter</button>
+    <div id="pwd-err" style="color:#c00;font-size:12px;margin-top:8px;min-height:16px"></div>
   </div>
-  <button class="btn-clear" id="btn-clear" onclick="clearAll()">🗑 Clear all puzzles from directory</button>
-  <a href="builder.html" class="btn-back">← Back to builder</a>
-  <div class="log" id="log"><span class="info">Ready. Click the button above to clear all puzzles.</span></div>
 </div>
 
+<div id="main">
+  <div class="clear-section">
+    <h3>🗑 Danger zone — clear all published puzzles</h3>
+    <p style="font-size:12px;color:#888;margin-bottom:10px">This permanently removes all puzzles from the public directory. Builder saved puzzles are NOT affected.</p>
+    <button class="btn-clear" onclick="clearAllPuzzles()">Clear all puzzles from directory</button>
+    <span id="clear-status" style="font-size:12px;margin-left:10px;color:#888"></span>
+  </div>
+  <div class="stats-row" id="stats-row"><div class="loading">Loading stats…</div></div>
+  <h2>👥 Registered users</h2>
+  <table id="users-table">
+    <thead><tr><th>Name</th><th>Email</th><th>Joined</th><th>Last active</th><th>Puzzles done</th></tr></thead>
+    <tbody><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
+  </table>
+  <h2>📊 Puzzle activity</h2>
+  <table id="activity-table">
+    <thead><tr><th>User</th><th>Puzzle</th><th>Status</th><th>Checks used</th><th>Last saved</th></tr></thead>
+    <tbody><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
+  </table>
+</div>
+
+<script src="supabase-auth.js"></script>
 <script src="cloud-storage.js"></script>
 <script>
-function log(msg, type='info'){
-  const el=document.getElementById('log');
-  el.innerHTML += '<br><span class="'+type+'">'+msg+'</span>';
-  el.scrollTop=el.scrollHeight;
+const ADMIN_PASSWORD = 'arrowword2024';
+
+function checkPwd(){
+  if(document.getElementById('pwd').value===ADMIN_PASSWORD){
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('main').style.display='block';
+    loadStats();
+  } else {
+    document.getElementById('pwd-err').textContent='Incorrect password.';
+    document.getElementById('pwd').value='';
+  }
 }
 
-async function clearAll(){
-  const btn=document.getElementById('btn-clear');
-  if(!confirm('Are you absolutely sure? This will remove ALL puzzles from the public directory.\n\nThis cannot be undone.')) return;
+async function waitForSb(fn, attempts=30){
+  while(typeof fn==='undefined'&&attempts-->0) await new Promise(r=>setTimeout(r,200));
+}
 
-  btn.disabled=true;
-  btn.textContent='⏳ Clearing…';
-  document.getElementById('log').innerHTML='';
+async function loadStats(){
+  // Wait for supabase-auth.js to initialise
+  let attempts=0;
+  while(typeof sbAdminGetAllProgress==='undefined'&&attempts++<30) await new Promise(r=>setTimeout(r,200));
 
   try {
-    log('Reading current puzzles…','info');
-    const list = await cloudGetPuzzles();
-    log('Found '+list.length+' puzzle(s) in the directory.','info');
+    const [progress, users, puzzles] = await Promise.all([
+      sbAdminGetAllProgress(),
+      sbAdminGetAllUsers(),
+      cloudGetIndex()
+    ]);
 
-    log('Writing empty list to JSONBin…','info');
-    await cloudSavePuzzles([]);
-    log('✓ Directory cleared successfully! All '+list.length+' puzzle(s) removed.','ok');
-    log('You can now go back to the builder and republish your puzzles.','ok');
+    const totalComplete = progress.filter(p=>p.complete).length;
+    const puzzleMap = {};
+    puzzles.forEach(p=>{puzzleMap[p.id]=p.title||p.id;});
 
-    btn.textContent='✓ Done — directory is now empty';
-    btn.style.background='#1a6e1a';
+    // User puzzle counts
+    const userPuzzleCount = {};
+    progress.forEach(p=>{userPuzzleCount[p.user_id]=(userPuzzleCount[p.user_id]||0)+1;});
+
+    // Stats cards
+    document.getElementById('stats-row').innerHTML=`
+      <div class="stat-card"><div class="stat-num">${users.length}</div><div class="stat-label">Registered users</div></div>
+      <div class="stat-card"><div class="stat-num">${puzzles.length}</div><div class="stat-label">Published puzzles</div></div>
+      <div class="stat-card"><div class="stat-num">${progress.length}</div><div class="stat-label">Puzzles started</div></div>
+      <div class="stat-card"><div class="stat-num">${totalComplete}</div><div class="stat-label">Puzzles completed</div></div>
+      <div class="stat-card"><div class="stat-num">${progress.length?Math.round(totalComplete/progress.length*100):0}%</div><div class="stat-label">Completion rate</div></div>
+    `;
+
+    // Users table
+    const uTbody=document.querySelector('#users-table tbody');
+    if(!users.length){uTbody.innerHTML='<tr><td colspan="5" style="color:#aaa;font-style:italic">No users yet.</td></tr>';}
+    else uTbody.innerHTML=users.map(u=>`<tr>
+      <td>${u.display_name||'—'}</td>
+      <td>${u.email||'—'}</td>
+      <td>${u.created_at?new Date(u.created_at).toLocaleDateString('en-ZA'):'—'}</td>
+      <td>${u.last_active?new Date(u.last_active).toLocaleDateString('en-ZA'):'—'}</td>
+      <td>${userPuzzleCount[u.id]||0}</td>
+    </tr>`).join('');
+
+    // Activity table
+    const aTbody=document.querySelector('#activity-table tbody');
+    if(!progress.length){aTbody.innerHTML='<tr><td colspan="5" style="color:#aaa;font-style:italic">No activity yet.</td></tr>';}
+    else {
+      const sorted=[...progress].sort((a,b)=>new Date(b.last_saved||0)-new Date(a.last_saved||0));
+      aTbody.innerHTML=sorted.map(p=>{
+        const u=p.user_profiles;
+        const userName=u?(u.display_name||u.email||'Unknown'):'Unknown';
+        const badge=p.complete?'<span class="badge b-complete">✓ Complete</span>':'<span class="badge b-progress">⏳ In progress</span>';
+        return`<tr>
+          <td>${userName}</td>
+          <td>${puzzleMap[p.puzzle_id]||p.puzzle_id}</td>
+          <td>${badge}</td>
+          <td>${p.check_count||0}</td>
+          <td>${p.last_saved?new Date(p.last_saved).toLocaleDateString('en-ZA'):'—'}</td>
+        </tr>`;
+      }).join('');
+    }
   } catch(e) {
-    log('ERROR: '+e.message,'err');
-    btn.disabled=false;
-    btn.textContent='🗑 Clear all puzzles from directory';
+    document.getElementById('stats-row').innerHTML=`<div style="color:#c00;padding:12px">Error loading stats: ${e.message}</div>`;
   }
+}
+
+async function clearAllPuzzles(){
+  if(!confirm('Clear ALL puzzles from the public directory? This cannot be undone.'))return;
+  const status=document.getElementById('clear-status');
+  status.textContent='Clearing…';
+  try{
+    await cloudSavePuzzles([]);
+    status.textContent='✓ Directory cleared.';
+    setTimeout(()=>status.textContent='',3000);
+  }catch(e){status.textContent='Error: '+e.message;}
 }
 </script>
 </body>
