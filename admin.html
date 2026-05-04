@@ -141,8 +141,11 @@ async function loadStats(){
     if(!progress.length){aTbody.innerHTML='<tr><td colspan="5" style="color:#aaa;font-style:italic">No activity yet.</td></tr>';}
     else {
       const sorted=[...progress].sort((a,b)=>new Date(b.last_saved||0)-new Date(a.last_saved||0));
+      // Build user lookup map
+      const userMap={};
+      users.forEach(u=>{userMap[u.id]=u;});
       aTbody.innerHTML=sorted.map(p=>{
-        const u=p.user_profiles;
+        const u=userMap[p.user_id];
         const userName=u?(u.display_name||u.email||'Unknown'):'Unknown';
         const badge=p.complete?'<span class="badge b-complete">✓ Complete</span>':'<span class="badge b-progress">⏳ In progress</span>';
         return`<tr>

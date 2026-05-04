@@ -119,16 +119,14 @@ async function sbIncrementCheckCount(puzzleId) {
 // ── Admin API (reads all users progress) ─────────────────────────────────────
 async function sbAdminGetAllProgress() {
   if (!_sb) return [];
-  // Joins progress with profiles
-  const { data, error } = await _sb.from('user_progress')
-    .select(`*, user_profiles(email, display_name, avatar_url)`);
-  if (error) { console.error('Admin query error:', error); return []; }
+  const { data, error } = await _sb.from('user_progress').select('*');
+  if (error) { console.error('Admin progress query error:', error); return []; }
   return data || [];
 }
 
 async function sbAdminGetAllUsers() {
   if (!_sb) return [];
   const { data, error } = await _sb.from('user_profiles').select('*');
-  if (error) return [];
+  if (error) { console.error('Admin users query error:', error); return []; }
   return data || [];
 }
