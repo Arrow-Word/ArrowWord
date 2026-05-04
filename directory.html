@@ -2,22 +2,70 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puzzle Directory — Arrow Word Puzzles</title>
-<!-- Arrow Word Puzzles v17 -->
+<!--
+  Arrow Word Puzzles
+  ══════════════════════════════════════════════════════
+  CURRENT VERSION: v18
+  ══════════════════════════════════════════════════════
+  CHANGELOG:
+  v18 - Complete auth rewrite using Supabase.
+        Real Google OAuth (genuine Google login page).
+        Facebook login support added.
+        Sign-in prompt appears on Solve click, not on page load.
+        Progress and completions saved to Supabase cloud database.
+        Check answers count tracked per user per puzzle.
+        Cross-device progress sync for signed-in users.
+        Removed Reveal answers button from solver.
+        Fixed nav/user-bar overlap.
+        Admin page foundation added.
+        Per-user stats: puzzles started, completed, check count.
+  v17 - Fixed cloud storage cross-device (GitHub CDN + API).
+        Directory default sort A-Z. Check answers clears selection.
+        Clicking whitespace deselects word. Save progress button.
+        Completed/in-progress badges. Delete from directory button.
+        Renamed Export file. Per-clue font size restored.
+        No-cache headers on all HTML files.
+  v16 - Solver-focused home page. About-builder page.
+        Delete puzzles page (password protected).
+        Size grouping tabs. Builder password protected.
+  v15 - JSONBin cloud storage. Anyone can publish.
+  v14 - Multi-page site. Navbar. Publish to web.
+  v13 - Zoom controls. Mobile improvements.
+  v12 - Celebration on completion.
+  v11 - Per-clue text size.
+  v10 - Drag to reorder clues.
+  v9  - Edit existing clues.
+  v8  - Confirm dialogs before delete/reset.
+  v7  - Fixed left/up word direction.
+  v6  - Crossing letter conflict detection.
+  v5  - Multiple clues per cell.
+  v4  - All 12 arrow directions.
+  v3  - Auto-place answer letters.
+  v2  - Visual direction picker.
+  v1  - Initial builder.
+  ══════════════════════════════════════════════════════
+-->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;background:#f5f0ff;color:#222;min-height:100vh}
 nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .nav-brand{font-size:20px;font-weight:700;text-decoration:none;color:#fff}
 .nav-brand span{color:#e8d8ff}
-.nav-links{display:flex;gap:8px;flex-wrap:wrap}
+.nav-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .nav-links a{color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500}
 .nav-links a:hover{background:rgba(255,255,255,0.15)}
 .nav-links a.active{background:rgba(255,255,255,0.22);color:#fff}
+/* User pill in nav */
+.nav-user{display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.15);border-radius:20px;padding:4px 12px 4px 4px}
+.nav-user img{width:24px;height:24px;border-radius:50%;object-fit:cover}
+.nav-user span{font-size:13px;color:#fff;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-user button{background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:12px;padding:3px 10px;font-size:11px;cursor:pointer}
+.nav-user button:hover{background:rgba(255,255,255,0.35)}
 .page-header{background:#fff;border-bottom:1px solid #e8e0f0;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .page-header h1{font-size:22px;font-weight:700;color:#443366}
 .page-header p{font-size:13px;color:#888;margin-top:2px}
@@ -41,7 +89,6 @@ main{max-width:1000px;margin:0 auto;padding:24px}
 .pcard-title{font-size:15px;font-weight:700;color:#443366;line-height:1.3}
 .pcard-meta{font-size:11px;color:#aaa}
 .pcard-size{font-size:11px;color:#888;background:#f0ecff;display:inline-block;padding:2px 8px;border-radius:4px;align-self:flex-start}
-/* Progress indicators */
 .pcard-badge{position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
 .badge-complete{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
 .badge-inprogress{background:#fff3cd;color:#856404;border:1px solid #ffc107}
@@ -50,6 +97,21 @@ main{max-width:1000px;margin:0 auto;padding:24px}
 .empty-state{text-align:center;padding:64px 24px;color:#999;grid-column:1/-1}
 .empty-icon{font-size:48px;margin-bottom:16px}
 .loading{color:#aaa;font-style:italic;font-size:14px;padding:24px;grid-column:1/-1;text-align:center}
+
+/* Sign-in modal */
+#signin-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:500;align-items:center;justify-content:center;padding:16px}
+#signin-modal.open{display:flex}
+.signin-box{background:#fff;border-radius:14px;padding:32px 28px;max-width:420px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+.signin-box h2{font-size:20px;font-weight:700;color:#443366;margin-bottom:8px}
+.signin-box p{font-size:13px;color:#666;line-height:1.6;margin-bottom:24px}
+.btn-google{width:100%;background:#fff;color:#333;border:1px solid #ddd;border-radius:8px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;transition:box-shadow .15s}
+.btn-google:hover{box-shadow:0 2px 8px rgba(0,0,0,0.15)}
+.btn-facebook{width:100%;background:#1877f2;color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px}
+.btn-facebook:hover{background:#166fe5}
+.btn-guest{width:100%;background:#fff;color:#888;border:1px solid #e0e0e0;border-radius:8px;padding:11px;font-size:13px;cursor:pointer}
+.btn-guest:hover{background:#f5f5f5}
+.signin-note{font-size:11px;color:#bbb;margin-top:14px;line-height:1.5}
+
 /* Solver overlay */
 #solver-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.62);z-index:200;overflow-y:auto}
 #solver-overlay.open{display:flex;flex-direction:column}
@@ -59,7 +121,6 @@ main{max-width:1000px;margin:0 auto;padding:24px}
 .solver-close{background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:14px;font-weight:600}
 .solver-close:hover{background:rgba(255,255,255,0.35)}
 .solver-body{padding:14px;flex:1;overflow-y:auto}
-/* Solver toolbar — left and right groups */
 .solve-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
 .solve-toolbar-left{display:flex;gap:6px;flex-wrap:wrap}
 .solve-toolbar-right{display:flex;gap:6px;flex-wrap:wrap}
@@ -101,7 +162,6 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 .solve-input.active-cell,.solve-input:focus.active-cell{background:#ffe680}
 #celebrate{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;align-items:center;justify-content:center;padding:16px}
 #celebrate .cel-box{background:#fff;border-radius:10px;padding:24px;width:340px;max-width:95vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
-.cred-warn{background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;font-size:12px;color:#664d03;margin-bottom:16px;line-height:1.5}
 @media print{
   nav,.page-header,main,.solve-toolbar,.zoom-bar,.solver-header{display:none!important}
   td.t-answer{background:#fff!important}
@@ -110,36 +170,6 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
   .solve-input{display:none}
 }
 </style>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script>
-  firebase.initializeApp({
-    apiKey:"AIzaSyA-QbwUgprGtna18gCHKMHfctmT9lcVBFA",
-    authDomain:"arrowword.firebaseapp.com",
-    projectId:"arrowword",
-    storageBucket:"arrowword.firebasestorage.app",
-    messagingSenderId:"523122165795",
-    appId:"1:523122165795:web:69e308770df7fc75114996"
-  });
-  const _auth = firebase.auth();
-  const _db   = firebase.firestore();
-  let _user = null;
-  let _cloudProgress = {};
-  _auth.onAuthStateChanged(async u => {
-    _user = u;
-    if (u) {
-      try {
-        const snaps = await _db.collection('users').doc(u.uid).collection('progress').get();
-        snaps.forEach(s => { _cloudProgress[s.id] = s.data(); });
-        if(typeof renderDir==='function') renderDir();
-      } catch(e) { console.warn('Progress load failed:', e); }
-    } else {
-      _cloudProgress = {};
-      if(typeof renderDir==='function') renderDir();
-    }
-  });
-  </script>
 </head>
 <body>
 <nav>
@@ -147,14 +177,24 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
   <div class="nav-links">
     <a href="index.html">Home</a>
     <a href="directory.html" class="active">Puzzles</a>
+    <!-- User pill — shown when signed in -->
+    <div class="nav-user" id="nav-user">
+      <img id="nav-avatar" src="" alt="">
+      <span id="nav-name"></span>
+      <button onclick="sbSignOut()">Sign out</button>
+    </div>
   </div>
 </nav>
+
 <div class="page-header">
-  <div><h1>📖 Puzzle Directory</h1><p>Click any puzzle to solve it online</p></div>
+  <div>
+    <h1>📖 Puzzle Directory</h1>
+    <p>Click any puzzle to solve it online</p>
+  </div>
   <a href="builder.html" style="background:#7744bb;color:#fff;text-decoration:none;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:600">+ Create puzzle</a>
 </div>
+
 <main>
-  <div id="cred-warn-area"></div>
   <div class="dir-toolbar">
     <input type="text" id="search" placeholder="Search puzzles…" oninput="renderDir()">
     <select id="sort-by" onchange="renderDir()">
@@ -166,8 +206,27 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
   </div>
   <div class="size-tabs" id="size-tabs"></div>
   <div class="count-line" id="count-line"></div>
-  <div id="dir-content"></div>
+  <div id="dir-content"><div class="loading">Loading puzzles…</div></div>
 </main>
+
+<!-- Sign-in modal -->
+<div id="signin-modal">
+  <div class="signin-box">
+    <div style="font-size:40px;margin-bottom:12px">🧩</div>
+    <h2>Sign in to track your progress</h2>
+    <p>Sign in to save which puzzles you've completed and pick up where you left off — on any device, any browser.<br><br>Or continue as a guest — you can still solve puzzles, but progress won't be saved.</p>
+    <button class="btn-google" onclick="doSignIn('google')">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <button class="btn-facebook" onclick="doSignIn('facebook')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      Continue with Facebook
+    </button>
+    <button class="btn-guest" onclick="continueAsGuest()">Continue without signing in</button>
+    <p class="signin-note">Signing in uses your existing Google or Facebook account — no new password needed. We only store your puzzle progress.</p>
+  </div>
+</div>
 
 <!-- Solver overlay -->
 <div id="solver-overlay" onclick="solverBgClick(event)">
@@ -184,7 +243,6 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
         </div>
         <div class="solve-toolbar-right">
           <button class="green" onclick="window.print()">🖨 Print</button>
-          
           <button class="warn" onclick="solverClear()">Clear</button>
         </div>
       </div>
@@ -215,6 +273,7 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 </div>
 
 <script src="cloud-storage.js"></script>
+<script src="supabase-auth.js"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -245,47 +304,82 @@ function getWordCells(dir,ans,or,oc){
   return cells;
 }
 
-// ── Progress storage ───────────────────────────────────────────────────────────
-const PROGRESS_KEY = 'arrowword_progress';
-const COMPLETE_KEY = 'arrowword_complete';
+// ── Auth state ────────────────────────────────────────────────────────────────
+let _cloudProgress = {};
+let _pendingSolverId = null;
+let _checkCounts = {};
 
-function saveProgressData(puzzleId, answers) {
-  const all = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
-  all[puzzleId] = { answers, savedAt: Date.now() };
-  localStorage.setItem(PROGRESS_KEY, JSON.stringify(all));
+sbOnUserChanged(async user => {
+  const navUser = document.getElementById('nav-user');
+  const navName = document.getElementById('nav-name');
+  const navAvatar = document.getElementById('nav-avatar');
+  if (user) {
+    navUser.style.display = 'flex';
+    navName.textContent = user.user_metadata?.full_name || user.email || '';
+    navAvatar.src = user.user_metadata?.avatar_url || '';
+    // Load cloud progress
+    try {
+      _cloudProgress = await sbLoadAllProgress();
+      renderDir();
+    } catch(e) { console.warn('Progress load failed:', e); }
+  } else {
+    navUser.style.display = 'none';
+    _cloudProgress = {};
+    renderDir();
+  }
+});
+
+// ── Sign-in flow ──────────────────────────────────────────────────────────────
+async function doSignIn(provider) {
+  document.getElementById('signin-modal').classList.remove('open');
+  if (provider === 'google') await sbSignInGoogle();
+  else if (provider === 'facebook') await sbSignInFacebook();
 }
 
-function loadProgressData(puzzleId) {
-  const all = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
-  return all[puzzleId] || null;
+function continueAsGuest() {
+  sessionStorage.setItem('guest_mode', '1');
+  document.getElementById('signin-modal').classList.remove('open');
+  if (_pendingSolverId) { openSolver(_pendingSolverId); _pendingSolverId = null; }
 }
 
-function markComplete(puzzleId) {
-  const all = JSON.parse(localStorage.getItem(COMPLETE_KEY) || '{}');
-  all[puzzleId] = Date.now();
-  localStorage.setItem(COMPLETE_KEY, JSON.stringify(all));
-  // clear saved progress since it's now done
-  const prog = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
-  delete prog[puzzleId];
-  localStorage.setItem(PROGRESS_KEY, JSON.stringify(prog));
+function solveClicked(id) {
+  const user = sbGetUser();
+  const isGuest = sessionStorage.getItem('guest_mode');
+  if (user || isGuest) {
+    openSolver(id);
+  } else {
+    _pendingSolverId = id;
+    document.getElementById('signin-modal').classList.add('open');
+  }
 }
 
-function getPuzzleStatus(puzzleId) {
-  const complete = JSON.parse(localStorage.getItem(COMPLETE_KEY) || '{}');
-  if (complete[puzzleId]) return 'complete';
-  const progress = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
-  if (progress[puzzleId]) return 'inprogress';
+// After sign-in redirect, if there was a pending puzzle open it
+sbOnUserChanged(user => {
+  if (user && _pendingSolverId) {
+    openSolver(_pendingSolverId);
+    _pendingSolverId = null;
+    document.getElementById('signin-modal').classList.remove('open');
+  }
+});
+
+// ── Progress helpers ──────────────────────────────────────────────────────────
+function getPuzzleStatus(id) {
+  if (_cloudProgress[id]) return _cloudProgress[id].complete ? 'complete' : 'inprogress';
+  const complete = JSON.parse(localStorage.getItem('arrowword_complete') || '{}');
+  if (complete[id]) return 'complete';
+  const progress = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
+  if (progress[id]) return 'inprogress';
   return 'new';
 }
 
-// ── Directory ──────────────────────────────────────────────────────────────────
+// ── Directory ─────────────────────────────────────────────────────────────────
 let allPuzzles = [], activeSize = 'all';
 
 async function loadDir() {
   document.getElementById('dir-content').innerHTML = '<div class="loading">Loading puzzles…</div>';
   document.getElementById('size-tabs').innerHTML = '';
   try {
-    allPuzzles = await cloudGetIndex(); // fast — no grid data
+    allPuzzles = await cloudGetIndex();
     buildSizeTabs();
     renderDir();
   } catch(e) {
@@ -293,16 +387,14 @@ async function loadDir() {
   }
 }
 
-function getSizeLabel(p) {
-  return (p.cols && p.rows) ? p.cols + '×' + p.rows : '?×?';
-}
+function getSizeLabel(p) { return (p.cols && p.rows) ? p.cols + '×' + p.rows : '?×?'; }
 
 function buildSizeTabs() {
   const counts = {};
   allPuzzles.forEach(p => { const s = getSizeLabel(p); counts[s] = (counts[s] || 0) + 1; });
   const sizes = Object.keys(counts).sort((a, b) => {
-    const [ac, ar] = a.split('×').map(Number);
-    const [bc, br] = b.split('×').map(Number);
+    const [ac,ar] = a.split('×').map(Number);
+    const [bc,br] = b.split('×').map(Number);
     return (ac * ar) - (bc * br);
   });
   const tabs = document.getElementById('size-tabs');
@@ -312,9 +404,9 @@ function buildSizeTabs() {
   allBtn.className = 'size-tab active'; allBtn.textContent = 'All (' + allPuzzles.length + ')';
   allBtn.onclick = () => setSize('all'); tabs.appendChild(allBtn);
   sizes.forEach(s => {
-    const btn = document.createElement('button');
-    btn.className = 'size-tab'; btn.textContent = s + ' (' + counts[s] + ')';
-    btn.dataset.size = s; btn.onclick = () => setSize(s); tabs.appendChild(btn);
+    const btn = document.createElement('button'); btn.className = 'size-tab';
+    btn.textContent = s + ' (' + counts[s] + ')'; btn.dataset.size = s;
+    btn.onclick = () => setSize(s); tabs.appendChild(btn);
   });
 }
 
@@ -328,71 +420,58 @@ function renderDir() {
   const q = (document.getElementById('search').value || '').toLowerCase();
   const sort = document.getElementById('sort-by').value;
   let list = allPuzzles.filter(p => {
-    if (!p || !p.id) return false; // skip corrupt entries
+    if (!p || !p.id) return false;
     const matchQ = !q || (p.title || '').toLowerCase().includes(q);
     const matchSize = activeSize === 'all' || getSizeLabel(p) === activeSize;
     return matchQ && matchSize;
   });
   if (sort === 'newest') list = [...list].sort((a, b) => (b.publishedAtMs || 0) - (a.publishedAtMs || 0));
   else if (sort === 'oldest') list = [...list].sort((a, b) => (a.publishedAtMs || 0) - (b.publishedAtMs || 0));
-  else list = [...list].sort((a, b) => (a.title || '').localeCompare(b.title || '')); // alpha default
+  else list = [...list].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
   document.getElementById('count-line').textContent = list.length + ' puzzle' + (list.length === 1 ? '' : 's');
   const content = document.getElementById('dir-content');
   if (!list.length) {
-    content.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>${q ? 'No puzzles match your search.' : 'No puzzles published yet.'}</p><a href="builder.html" style="color:#7744bb;font-weight:600">Open the builder →</a></div>`;
+    content.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>${q ? 'No puzzles match your search.' : 'No puzzles published yet.'}</p></div>`;
     return;
   }
   const sizes = [...new Set(list.map(p => getSizeLabel(p)))];
   if (activeSize === 'all' && sizes.length > 1 && !q && sort === 'alpha') {
     content.innerHTML = sizes.sort().map(s => {
       const group = list.filter(p => getSizeLabel(p) === s);
-      return `<div class="group-section">
-        <div class="group-title">${s} grid <span class="group-count">${group.length} puzzle${group.length === 1 ? '' : 's'}</span></div>
-        <div class="puzzle-grid">${group.map(p => cardHtml(p)).join('')}</div>
-      </div>`;
+      return `<div class="group-section"><div class="group-title">${s} grid <span class="group-count">${group.length} puzzle${group.length === 1 ? '' : 's'}</span></div><div class="puzzle-grid">${group.map(cardHtml).join('')}</div></div>`;
     }).join('');
   } else {
-    content.innerHTML = '<div class="puzzle-grid">' + list.map(p => cardHtml(p)).join('') + '</div>';
+    content.innerHTML = '<div class="puzzle-grid">' + list.map(cardHtml).join('') + '</div>';
   }
 }
 
 function cardHtml(p) {
-  const title = p.title || '(Untitled puzzle)';
+  const title = p.title || '(Untitled)';
   const status = getPuzzleStatus(p.id);
-  const badge = status === 'complete'
-    ? '<span class="pcard-badge badge-complete">✓ Completed</span>'
-    : status === 'inprogress'
-    ? '<span class="pcard-badge badge-inprogress">⏳ In progress</span>'
-    : '';
-  return `<div class="pcard">
-    ${badge}
+  const badge = status === 'complete' ? '<span class="pcard-badge badge-complete">✓ Completed</span>'
+    : status === 'inprogress' ? '<span class="pcard-badge badge-inprogress">⏳ In progress</span>' : '';
+  const btnLabel = status === 'inprogress' ? '▶ Continue solving' : status === 'complete' ? '↺ Solve again' : 'Solve →';
+  return `<div class="pcard">${badge}
     <div class="pcard-title">${escHtml(title)}</div>
     <div class="pcard-meta">Published ${p.publishedAt || ''}</div>
     ${p.cols && p.rows ? `<div class="pcard-size">${p.cols}×${p.rows} grid</div>` : ''}
-    <button class="btn-solve" onclick="openSolverWithAuth('${p.id}')">
-      ${status === 'inprogress' ? '▶ Continue solving' : status === 'complete' ? '↺ Solve again' : 'Solve →'}
-    </button>
+    <button class="btn-solve" onclick="solveClicked('${p.id}')">${btnLabel}</button>
   </div>`;
 }
 
-// ── Solver ─────────────────────────────────────────────────────────────────────
+// ── Solver ────────────────────────────────────────────────────────────────────
 let sWords = [], sActive = null, sCurZoom = 1, sCurPuzzleId = null;
 
-function solverBgClick(e) {
-  // clicking the dark overlay (not the box) closes the solver
-  if (e.target === document.getElementById('solver-overlay')) closeSolver();
-}
-
+function solverBgClick(e) { if (e.target === document.getElementById('solver-overlay')) closeSolver(); }
 function gridWrapClick(e) {
-  // clicking empty space inside the grid wrap deselects current word
-  if (e.target === document.getElementById('s-grid-wrap') || e.target === document.getElementById('s-zoom-wrap') || e.target.tagName === 'TD' || e.target.closest('td.t-empty') || e.target.closest('td.t-black')) {
-    sActive = null;
-    sHighlight();
+  if (e.target.closest('td.t-empty') || e.target.closest('td.t-black') || e.target === document.getElementById('s-grid-wrap') || e.target === document.getElementById('s-zoom-wrap')) {
+    sActive = null; sHighlight();
   }
 }
 
 async function openSolver(id) {
   sCurPuzzleId = id;
+  _checkCounts[id] = _checkCounts[id] || 0;
   document.getElementById('solver-title').textContent = 'Loading…';
   document.getElementById('solver-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -403,17 +482,25 @@ async function openSolver(id) {
     document.getElementById('solver-title').textContent = entry.title;
     buildSolverGrid(entry.data);
     setTimeout(() => { sZoomFit(); fitSolverText(); }, 80);
-    // restore saved progress if any
-    const prog = loadProgressData(id);
-    if (prog && prog.answers) {
-      setTimeout(() => {
-        Object.entries(prog.answers).forEach(([key, val]) => {
+    // Restore progress — cloud first, then localStorage
+    setTimeout(async () => {
+      let answers = null;
+      if (sbGetUser()) {
+        const prog = await sbLoadProgress(id);
+        if (prog && prog.answers) { answers = prog.answers; _checkCounts[id] = prog.check_count || 0; }
+      }
+      if (!answers) {
+        const local = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
+        if (local[id]) answers = local[id].answers;
+      }
+      if (answers) {
+        Object.entries(answers).forEach(([key, val]) => {
           const [r, c] = key.split(',').map(Number);
           const inp = sGetInp(r, c);
           if (inp) inp.value = val;
         });
-      }, 150);
-    }
+      }
+    }, 150);
   } catch(e) {
     document.getElementById('s-grid').innerHTML = `<tr><td style="padding:24px;color:#c00">Could not load: ${escHtml(e.message)}</td></tr>`;
   }
@@ -423,272 +510,166 @@ function closeSolver() {
   document.getElementById('solver-overlay').classList.remove('open');
   document.body.style.overflow = '';
   history.replaceState(null, '', 'directory.html');
-  sActive = null;
-  sCurPuzzleId = null;
+  sActive = null; sCurPuzzleId = null;
 }
 
-function saveProgress() {
+async function saveProgress() {
   if (!sCurPuzzleId) return;
   const answers = {};
   document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
     if (inp.value) answers[inp.dataset.r + ',' + inp.dataset.c] = inp.value;
   });
-  saveProgressData(sCurPuzzleId, answers);
-  // update card badge
+  // Save to localStorage always
+  const local = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
+  local[sCurPuzzleId] = { answers, savedAt: Date.now() };
+  localStorage.setItem('arrowword_progress', JSON.stringify(local));
+  // Save to cloud if signed in
+  if (sbGetUser()) {
+    await sbSaveProgress(sCurPuzzleId, answers, false, _checkCounts[sCurPuzzleId] || 0);
+    _cloudProgress[sCurPuzzleId] = { complete: false };
+  }
   renderDir();
-  // brief feedback
   const btn = document.querySelector('.solve-toolbar-left .blue');
-  if (btn) { const orig = btn.textContent; btn.textContent = '✓ Saved!'; setTimeout(() => btn.textContent = orig, 1500); }
+  if (btn) { const o = btn.textContent; btn.textContent = '✓ Saved!'; setTimeout(() => btn.textContent = o, 1500); }
 }
 
 function buildSolverGrid(data) {
-  const rows = data.rows, cols = data.cols, cSz = data.cellSizePx || 64, tSz = data.textSizePx || 12;
-  const arSz = Math.max(10, Math.round(cSz * 0.24));
-  sWords = []; sActive = null;
-  const G2 = [];
-  for (let r = 0; r < rows; r++) { G2.push([]); for (let c = 0; c < cols; c++) G2[r].push({ t: 'empty', clues: [], answerOf: null }); }
-  data.cells.forEach(cell => {
-    if (cell.t === 'black') { G2[cell.r][cell.c].t = 'black'; }
-    else if (cell.t === 'clue') {
-      G2[cell.r][cell.c] = { t: 'clue', clues: cell.clues.map(cl => ({ ...cl })), answerOf: null };
-      cell.clues.forEach((cl, ci) => {
-        const wcells = getWordCells(cl.dir, cl.ans, cell.r, cell.c).filter(([ar, ac]) => ar >= 0 && ar < rows && ac >= 0 && ac < cols);
-        sWords.push({ or: cell.r, oc: cell.c, ci, cells: wcells, ans: cl.ans });
-        wcells.forEach(([ar, ac], i) => { if (G2[ar][ac].t === 'answer') G2[ar][ac].letter2 = cl.ans[i]; else G2[ar][ac] = { t: 'answer', clues: [], answerOf: { letter: cl.ans[i] } }; });
+  const rows=data.rows,cols=data.cols,cSz=data.cellSizePx||64,tSz=data.textSizePx||12;
+  const arSz=Math.max(10,Math.round(cSz*0.24));
+  sWords=[];sActive=null;
+  const G2=[];
+  for(let r=0;r<rows;r++){G2.push([]);for(let c=0;c<cols;c++)G2[r].push({t:'empty',clues:[],answerOf:null});}
+  data.cells.forEach(cell=>{
+    if(cell.t==='black'){G2[cell.r][cell.c].t='black';}
+    else if(cell.t==='clue'){
+      G2[cell.r][cell.c]={t:'clue',clues:cell.clues.map(cl=>({...cl})),answerOf:null};
+      cell.clues.forEach((cl,ci)=>{
+        const wcells=getWordCells(cl.dir,cl.ans,cell.r,cell.c).filter(([ar,ac])=>ar>=0&&ar<rows&&ac>=0&&ac<cols);
+        sWords.push({or:cell.r,oc:cell.c,ci,cells:wcells,ans:cl.ans});
+        wcells.forEach(([ar,ac],i)=>{if(G2[ar][ac].t==='answer')G2[ar][ac].letter2=cl.ans[i];else G2[ar][ac]={t:'answer',clues:[],answerOf:{letter:cl.ans[i]}};});
       });
     }
   });
-  const sz = `width:${cSz}px;height:${cSz}px;min-width:${cSz}px;min-height:${cSz}px;max-width:${cSz}px;max-height:${cSz}px`;
-  const tbl = document.getElementById('s-grid'); tbl.innerHTML = '';
-  for (let r = 0; r < rows; r++) {
-    const tr = document.createElement('tr');
-    for (let c = 0; c < cols; c++) {
-      const cell = G2[r][c], td = document.createElement('td'); td.setAttribute('style', sz);
-      if (cell.t === 'black') { td.className = 't-black'; }
-      else if (cell.t === 'clue') {
-        td.className = 't-clue';
-        const inner = document.createElement('div'); inner.className = 'clue-inner';
-        const isMulti = cell.clues.length > 1;
-        cell.clues.forEach((cl, idx) => {
-          if (idx > 0) { const dv = document.createElement('div'); dv.className = 'clue-divider'; inner.appendChild(dv); }
-          const slot = document.createElement('div'); slot.className = 'clue-slot ' + eAPC(cl.dir, isMulti);
-          slot.dataset.or = r; slot.dataset.oc = c; slot.dataset.ci = idx;
-          const fs = cl.textSize && cl.textSize > 0 ? cl.textSize : tSz;
-          slot.style.flex = fs + ' 1 0';
-          slot.innerHTML = `<div class="slot-text" style="font-size:${fs}px">${escHtml(cl.clue || '?')}</div><div class="slot-arrow">${arrowSVG(cl.dir, arSz)}</div>`;
-          slot.addEventListener('click', e => { e.stopPropagation(); sPickClue(+slot.dataset.or, +slot.dataset.oc, +slot.dataset.ci); });
+  const sz=`width:${cSz}px;height:${cSz}px;min-width:${cSz}px;min-height:${cSz}px;max-width:${cSz}px;max-height:${cSz}px`;
+  const tbl=document.getElementById('s-grid');tbl.innerHTML='';
+  for(let r=0;r<rows;r++){
+    const tr=document.createElement('tr');
+    for(let c=0;c<cols;c++){
+      const cell=G2[r][c],td=document.createElement('td');td.setAttribute('style',sz);
+      if(cell.t==='black'){td.className='t-black';}
+      else if(cell.t==='clue'){
+        td.className='t-clue';
+        const inner=document.createElement('div');inner.className='clue-inner';
+        const isMulti=cell.clues.length>1;
+        cell.clues.forEach((cl,idx)=>{
+          if(idx>0){const dv=document.createElement('div');dv.className='clue-divider';inner.appendChild(dv);}
+          const slot=document.createElement('div');slot.className='clue-slot '+eAPC(cl.dir,isMulti);
+          slot.dataset.or=r;slot.dataset.oc=c;slot.dataset.ci=idx;
+          const fs=cl.textSize&&cl.textSize>0?cl.textSize:tSz;
+          slot.style.flex=fs+' 1 0';
+          slot.innerHTML=`<div class="slot-text" style="font-size:${fs}px">${escHtml(cl.clue||'?')}</div><div class="slot-arrow">${arrowSVG(cl.dir,arSz)}</div>`;
+          slot.addEventListener('click',e=>{e.stopPropagation();sPickClue(+slot.dataset.or,+slot.dataset.oc,+slot.dataset.ci);});
           inner.appendChild(slot);
         });
         td.appendChild(inner);
-      } else if (cell.t === 'answer') {
-        td.className = 't-answer';
-        const inp = document.createElement('input'); inp.className = 'solve-input'; inp.type = 'text'; inp.maxLength = 1;
-        inp.dataset.r = r; inp.dataset.c = c; inp.style.fontSize = Math.round(cSz * 0.38) + 'px';
-        inp.setAttribute('autocapitalize', 'characters'); inp.setAttribute('autocomplete', 'off');
-        inp.setAttribute('autocorrect', 'off'); inp.setAttribute('spellcheck', 'false');
-        inp.addEventListener('input', sSolveInput);
-        inp.addEventListener('keydown', sSolveKeydown);
-        inp.addEventListener('focus', sSolveFocus);
+      }else if(cell.t==='answer'){
+        td.className='t-answer';
+        const inp=document.createElement('input');inp.className='solve-input';inp.type='text';inp.maxLength=1;
+        inp.dataset.r=r;inp.dataset.c=c;inp.style.fontSize=Math.round(cSz*0.38)+'px';
+        inp.setAttribute('autocapitalize','characters');inp.setAttribute('autocomplete','off');inp.setAttribute('autocorrect','off');inp.setAttribute('spellcheck','false');
+        inp.addEventListener('input',sSolveInput);inp.addEventListener('keydown',sSolveKeydown);inp.addEventListener('focus',sSolveFocus);
         td.appendChild(inp);
-      } else { td.className = 't-empty'; }
+      }else{td.className='t-empty';}
       tr.appendChild(td);
     }
     tbl.appendChild(tr);
   }
 }
 
-function fitSolverText() {
-  document.querySelectorAll('#s-grid .clue-slot').forEach(slot => {
-    const t = slot.querySelector('.slot-text'); if (!t) return;
-    let fs = parseFloat(t.style.fontSize) || 10, s = 40;
-    while (s-- > 0 && fs > 4 && (slot.scrollWidth > slot.clientWidth + 1 || slot.scrollHeight > slot.clientHeight + 1)) { fs -= 0.5; t.style.fontSize = fs + 'px'; }
-  });
+function fitSolverText(){document.querySelectorAll('#s-grid .clue-slot').forEach(slot=>{const t=slot.querySelector('.slot-text');if(!t)return;let fs=parseFloat(t.style.fontSize)||10,s=40;while(s-->0&&fs>4&&(slot.scrollWidth>slot.clientWidth+1||slot.scrollHeight>slot.clientHeight+1)){fs-=0.5;t.style.fontSize=fs+'px';}});}
+function sGetInp(r,c){return document.querySelector('#s-grid input.solve-input[data-r="'+r+'"][data-c="'+c+'"]');}
+function sPickClue(or,oc,ci){const w=sWords.find(x=>x.or===or&&x.oc===oc&&x.ci===ci);if(!w)return;sActive={or,oc,ci,cells:w.cells,ans:w.ans,idx:0};sHighlight();const inp=sGetInp(w.cells[0][0],w.cells[0][1]);if(inp){inp.focus();inp.select();}}
+function sHighlight(){
+  document.querySelectorAll('#s-grid .solve-input').forEach(i=>i.classList.remove('in-active-word','active-cell'));
+  document.querySelectorAll('#s-grid .clue-slot').forEach(s=>s.classList.remove('active-clue'));
+  if(!sActive)return;
+  sActive.cells.forEach(([r,c],i)=>{const inp=sGetInp(r,c);if(inp){inp.classList.add('in-active-word');if(i===sActive.idx)inp.classList.add('active-cell');}});
+  const slot=document.querySelector('#s-grid .clue-slot[data-or="'+sActive.or+'"][data-oc="'+sActive.oc+'"][data-ci="'+sActive.ci+'"]');
+  if(slot)slot.classList.add('active-clue');
 }
-
-function sGetInp(r, c) { return document.querySelector('#s-grid input.solve-input[data-r="' + r + '"][data-c="' + c + '"]'); }
-
-function sPickClue(or, oc, ci) {
-  const w = sWords.find(x => x.or === or && x.oc === oc && x.ci === ci); if (!w) return;
-  sActive = { or, oc, ci, cells: w.cells, ans: w.ans, idx: 0 };
-  sHighlight();
-  const inp = sGetInp(w.cells[0][0], w.cells[0][1]); if (inp) { inp.focus(); inp.select(); }
+function sSolveFocus(e){
+  const inp=e.target;inp.classList.remove('wrong');
+  const r=+inp.dataset.r,c=+inp.dataset.c;
+  if(sActive){const i=sActive.cells.findIndex(([a,b])=>a===r&&b===c);if(i>=0){sActive.idx=i;sHighlight();return;}}
+  const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));
+  if(w){sActive={or:w.or,oc:w.oc,ci:w.ci,cells:w.cells,ans:w.ans,idx:w.cells.findIndex(([a,b])=>a===r&&b===c)};if(sActive.idx<0)sActive.idx=0;sHighlight();}
 }
-
-function sHighlight() {
-  document.querySelectorAll('#s-grid .solve-input').forEach(i => i.classList.remove('in-active-word', 'active-cell'));
-  document.querySelectorAll('#s-grid .clue-slot').forEach(s => s.classList.remove('active-clue'));
-  if (!sActive) return;
-  sActive.cells.forEach(([r, c], i) => { const inp = sGetInp(r, c); if (inp) { inp.classList.add('in-active-word'); if (i === sActive.idx) inp.classList.add('active-cell'); } });
-  const slot = document.querySelector('#s-grid .clue-slot[data-or="' + sActive.or + '"][data-oc="' + sActive.oc + '"][data-ci="' + sActive.ci + '"]');
-  if (slot) slot.classList.add('active-clue');
-}
-
-function sSolveFocus(e) {
-  const inp = e.target; inp.classList.remove('wrong');
-  const r = +inp.dataset.r, c = +inp.dataset.c;
-  if (sActive) { const i = sActive.cells.findIndex(([a, b]) => a === r && b === c); if (i >= 0) { sActive.idx = i; sHighlight(); return; } }
-  const w = sWords.find(x => x.cells.some(([a, b]) => a === r && b === c));
-  if (w) { sActive = { or: w.or, oc: w.oc, ci: w.ci, cells: w.cells, ans: w.ans, idx: w.cells.findIndex(([a, b]) => a === r && b === c) }; if (sActive.idx < 0) sActive.idx = 0; sHighlight(); }
-}
-
-function sSolveInput(e) {
-  const inp = e.target;
-  inp.value = (inp.value || '').slice(-1).toUpperCase().replace(/[^A-Z]/, ''); inp.classList.remove('wrong');
-  if (inp.value && sActive) { const next = sActive.idx + 1; if (next < sActive.cells.length) { sActive.idx = next; const [nr, nc] = sActive.cells[next]; const ni = sGetInp(nr, nc); if (ni) { ni.focus(); ni.select(); } } else sHighlight(); }
+function sSolveInput(e){
+  const inp=e.target;inp.value=(inp.value||'').slice(-1).toUpperCase().replace(/[^A-Z]/,'');inp.classList.remove('wrong');
+  if(inp.value&&sActive){const next=sActive.idx+1;if(next<sActive.cells.length){sActive.idx=next;const[nr,nc]=sActive.cells[next];const ni=sGetInp(nr,nc);if(ni){ni.focus();ni.select();}}else sHighlight();}
   sMaybeCelebrate();
 }
-
-function sSolveKeydown(e) {
-  const inp = e.target;
-  if (e.key === 'Backspace') { if (inp.value) return; if (sActive && sActive.idx > 0) { e.preventDefault(); sActive.idx--; const [pr, pc] = sActive.cells[sActive.idx]; const pi = sGetInp(pr, pc); if (pi) { pi.value = ''; pi.classList.remove('wrong'); pi.focus(); pi.select(); } } }
-  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { if (sActive && sActive.idx < sActive.cells.length - 1) { e.preventDefault(); sActive.idx++; const [nr, nc] = sActive.cells[sActive.idx]; const ni = sGetInp(nr, nc); if (ni) { ni.focus(); ni.select(); } } }
-  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { if (sActive && sActive.idx > 0) { e.preventDefault(); sActive.idx--; const [pr, pc] = sActive.cells[sActive.idx]; const pi = sGetInp(pr, pc); if (pi) { pi.focus(); pi.select(); } } }
-  else if (e.key === 'Escape') { sActive = null; sHighlight(); inp.blur(); }
+function sSolveKeydown(e){
+  const inp=e.target;
+  if(e.key==='Backspace'){if(inp.value)return;if(sActive&&sActive.idx>0){e.preventDefault();sActive.idx--;const[pr,pc]=sActive.cells[sActive.idx];const pi=sGetInp(pr,pc);if(pi){pi.value='';pi.classList.remove('wrong');pi.focus();pi.select();}}}
+  else if(e.key==='ArrowRight'||e.key==='ArrowDown'){if(sActive&&sActive.idx<sActive.cells.length-1){e.preventDefault();sActive.idx++;const[nr,nc]=sActive.cells[sActive.idx];const ni=sGetInp(nr,nc);if(ni){ni.focus();ni.select();}}}
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){if(sActive&&sActive.idx>0){e.preventDefault();sActive.idx--;const[pr,pc]=sActive.cells[sActive.idx];const pi=sGetInp(pr,pc);if(pi){pi.focus();pi.select();}}}
+  else if(e.key==='Escape'){sActive=null;sHighlight();inp.blur();}
 }
-
-function sMaybeCelebrate() {
-  const inputs = document.querySelectorAll('#s-grid td.t-answer input'); if (!inputs.length) return;
-  for (let i = 0; i < inputs.length; i++) {
-    const r = +inputs[i].dataset.r, c = +inputs[i].dataset.c;
-    const w = sWords.find(x => x.cells.some(([a, b]) => a === r && b === c)); if (!w) return;
-    const idx = w.cells.findIndex(([a, b]) => a === r && b === c);
-    if ((inputs[i].value || '').toUpperCase() !== w.ans[idx]) return;
+async function sMaybeCelebrate(){
+  const inputs=document.querySelectorAll('#s-grid td.t-answer input');if(!inputs.length)return;
+  for(let i=0;i<inputs.length;i++){
+    const r=+inputs[i].dataset.r,c=+inputs[i].dataset.c;
+    const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));if(!w)return;
+    const idx=w.cells.findIndex(([a,b])=>a===r&&b===c);
+    if((inputs[i].value||'').toUpperCase()!==w.ans[idx])return;
   }
-  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-  sActive = null; sHighlight();
-  if (sCurPuzzleId) markComplete(sCurPuzzleId);
-  renderDir(); // update badge
-  document.getElementById('celebrate').style.display = 'flex';
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  sActive=null;sHighlight();
+  if(sCurPuzzleId){
+    // Save completion
+    const answers={};
+    document.querySelectorAll('#s-grid input.solve-input').forEach(inp=>{if(inp.value)answers[inp.dataset.r+','+inp.dataset.c]=inp.value;});
+    const complete=JSON.parse(localStorage.getItem('arrowword_complete')||'{}');
+    complete[sCurPuzzleId]=Date.now();
+    localStorage.setItem('arrowword_complete',JSON.stringify(complete));
+    const prog=JSON.parse(localStorage.getItem('arrowword_progress')||'{}');
+    delete prog[sCurPuzzleId];
+    localStorage.setItem('arrowword_progress',JSON.stringify(prog));
+    if(sbGetUser()){
+      await sbSaveProgress(sCurPuzzleId,answers,true,_checkCounts[sCurPuzzleId]||0);
+      _cloudProgress[sCurPuzzleId]={complete:true};
+    }
+    renderDir();
+  }
+  document.getElementById('celebrate').style.display='flex';
 }
-
-function solverCheck() {
-  let wrong = 0, filled = 0;
-  document.querySelectorAll('#s-grid td.t-answer input').forEach(inp => {
-    const r = +inp.dataset.r, c = +inp.dataset.c;
-    const got = (inp.value || '').toUpperCase();
-    if (!got) { inp.classList.remove('wrong'); return; }
-    filled++;
-    const w = sWords.find(x => x.cells.some(([a, b]) => a === r && b === c)); if (!w) return;
-    const idx = w.cells.findIndex(([a, b]) => a === r && b === c);
-    if (got !== w.ans[idx]) { inp.classList.add('wrong'); wrong++; } else inp.classList.remove('wrong');
+async function solverCheck(){
+  let wrong=0,filled=0;
+  document.querySelectorAll('#s-grid td.t-answer input').forEach(inp=>{
+    const r=+inp.dataset.r,c=+inp.dataset.c;
+    const got=(inp.value||'').toUpperCase();if(!got){inp.classList.remove('wrong');return;}filled++;
+    const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));if(!w)return;
+    const idx=w.cells.findIndex(([a,b])=>a===r&&b===c);
+    if(got!==w.ans[idx]){inp.classList.add('wrong');wrong++;}else inp.classList.remove('wrong');
   });
-  // deselect after checking (point 2)
-  sActive = null; sHighlight();
-  if (!filled) alert('No letters typed yet.');
-  else alert(`${filled - wrong} correct, ${wrong} wrong (out of ${filled} typed).`);
-}
-
-function solverReveal() {
-  if (!confirm('Reveal all answers?')) return;
-  sWords.forEach(w => { w.cells.forEach(([r, c], i) => { const inp = sGetInp(r, c); if (inp) { inp.value = w.ans[i]; inp.classList.remove('wrong'); } }); });
-}
-
-function solverClear() {
-  if (!confirm('Clear all your answers?')) return;
-  document.querySelectorAll('#s-grid .solve-input').forEach(i => { i.value = ''; i.classList.remove('wrong'); });
-  sActive = null; sHighlight();
-}
-
-function sApplyZoom() {
-  const w = document.getElementById('s-zoom-wrap'); if (!w) return;
-  w.style.transform = 'scale(' + sCurZoom + ')';
-  document.getElementById('s-zoom-val').textContent = Math.round(sCurZoom * 100) + '%';
-  const tbl = document.getElementById('s-grid');
-  if (tbl && tbl.offsetWidth) { w.style.width = (tbl.offsetWidth * sCurZoom) + 'px'; w.style.height = (tbl.offsetHeight * sCurZoom) + 'px'; }
-}
-function sSetZoom(z) { sCurZoom = Math.max(0.25, Math.min(3, z)); sApplyZoom(); }
-function sZoomBy(d) { sSetZoom(sCurZoom + d); }
-function sZoomFit() { const wrap = document.getElementById('s-grid-wrap'); const tbl = document.getElementById('s-grid'); if (!wrap || !tbl || !tbl.offsetWidth) return; sSetZoom(Math.min(1, (wrap.clientWidth - 20) / tbl.offsetWidth)); }
-
-// ── Init ───────────────────────────────────────────────────────────────────────
-
-let _pendingSolverId = null;
-
-function openSolverWithAuth(id) {
-  if (_user || sessionStorage.getItem('guest_mode')) {
-    openSolver(id);
-  } else {
-    _pendingSolverId = id;
-    document.getElementById('signin-modal').style.display = 'flex';
+  sActive=null;sHighlight();
+  // Track check count
+  if(sCurPuzzleId){
+    _checkCounts[sCurPuzzleId]=(_checkCounts[sCurPuzzleId]||0)+1;
+    if(sbGetUser()) await sbIncrementCheckCount(sCurPuzzleId);
   }
+  if(!filled)alert('No letters typed yet.');
+  else alert(`${filled-wrong} correct, ${wrong} wrong (out of ${filled} typed).`);
 }
-
-async function doGoogleSignIn() {
-  document.getElementById('signin-modal').style.display = 'none';
-  try {
-    await _auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-    if (_pendingSolverId) { openSolver(_pendingSolverId); _pendingSolverId = null; }
-  } catch(e) { if (e.code !== 'auth/popup-closed-by-user') alert('Sign in failed: ' + e.message); }
-}
-
-function continueAsGuest() {
-  sessionStorage.setItem('guest_mode', '1');
-  document.getElementById('signin-modal').style.display = 'none';
-  if (_pendingSolverId) { openSolver(_pendingSolverId); _pendingSolverId = null; }
-}
-
-// Update user bar when auth state changes
-_auth.onAuthStateChanged(u => {
-  const bar = document.getElementById('user-bar');
-  const nameEl = document.getElementById('user-name');
-  if (u && bar && nameEl) {
-    bar.style.display = 'flex';
-    nameEl.textContent = u.displayName || u.email;
-  } else if (bar) {
-    bar.style.display = 'none';
-  }
-});
-
-// Override getPuzzleStatus to use cloud progress
-function getPuzzleStatus(id) {
-  if (_cloudProgress[id]) return _cloudProgress[id].complete ? 'complete' : 'inprogress';
-  const complete = JSON.parse(localStorage.getItem('arrowword_complete') || '{}');
-  if (complete[id]) return 'complete';
-  const progress = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
-  if (progress[id]) return 'inprogress';
-  return 'new';
-}
-
-// Override saveProgress to also save to cloud
-const _origSaveProgress = saveProgress;
-async function saveProgress() {
-  _origSaveProgress();
-  if (_user && sCurPuzzleId) {
-    const answers = {};
-    document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
-      if (inp.value) answers[inp.dataset.r+','+inp.dataset.c] = inp.value;
-    });
-    try {
-      await _db.collection('users').doc(_user.uid).collection('progress').doc(sCurPuzzleId)
-        .set({answers, complete:false, savedAt:Date.now(), puzzleId:sCurPuzzleId});
-      _cloudProgress[sCurPuzzleId] = {answers, complete:false};
-    } catch(e) { console.warn('Cloud save failed:', e); }
-  }
-}
+function solverClear(){if(!confirm('Clear all your answers?'))return;document.querySelectorAll('#s-grid .solve-input').forEach(i=>{i.value='';i.classList.remove('wrong');});sActive=null;sHighlight();}
+function sApplyZoom(){const w=document.getElementById('s-zoom-wrap');if(!w)return;w.style.transform='scale('+sCurZoom+')';document.getElementById('s-zoom-val').textContent=Math.round(sCurZoom*100)+'%';const tbl=document.getElementById('s-grid');if(tbl&&tbl.offsetWidth){w.style.width=(tbl.offsetWidth*sCurZoom)+'px';w.style.height=(tbl.offsetHeight*sCurZoom)+'px';}}
+function sSetZoom(z){sCurZoom=Math.max(0.25,Math.min(3,z));sApplyZoom();}
+function sZoomBy(d){sSetZoom(sCurZoom+d);}
+function sZoomFit(){const wrap=document.getElementById('s-grid-wrap');const tbl=document.getElementById('s-grid');if(!wrap||!tbl||!tbl.offsetWidth)return;sSetZoom(Math.min(1,(wrap.clientWidth-20)/tbl.offsetWidth));}
 
 loadDir();
-(function () { const id = new URLSearchParams(location.search).get('id'); if (id) setTimeout(() => openSolver(id), 300); })();
+(function(){const id=new URLSearchParams(location.search).get('id');if(id)setTimeout(()=>solveClicked(id),300);})();
 </script>
-
-<!-- Sign-in modal (shown when clicking Solve) -->
-<div id="signin-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;align-items:center;justify-content:center;padding:16px">
-  <div style="background:#fff;border-radius:12px;padding:28px;max-width:400px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.2)">
-    <div style="font-size:36px;margin-bottom:12px">🧩</div>
-    <h2 style="font-size:18px;font-weight:700;color:#443366;margin-bottom:8px">Save your progress</h2>
-    <p style="font-size:13px;color:#666;line-height:1.6;margin-bottom:20px">Sign in with Google to save your progress across devices. Your completed puzzles and in-progress work will be remembered wherever you play.</p>
-    <button onclick="doGoogleSignIn()" style="width:100%;background:#4285f4;color:#fff;border:none;border-radius:7px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">
-      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#fff" d="M9 3.48c1.69 0 2.83.73 3.48 1.34l2.54-2.48C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.96l2.91 2.26C4.6 5.05 6.62 3.48 9 3.48z"/><path fill="#fff" d="M17.64 9.2c0-.74-.06-1.28-.19-1.84H9v3.34h4.96c-.1.83-.64 2.08-1.84 2.92l2.84 2.2c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#fff" d="M3.88 10.78A5.54 5.54 0 0 1 3.58 9c0-.62.11-1.22.29-1.78L.96 4.96A9.008 9.008 0 0 0 0 9c0 1.45.35 2.82.96 4.04l2.92-2.26z"/><path fill="#fff" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.84-2.2c-.76.53-1.78.9-3.12.9-2.38 0-4.4-1.57-5.12-3.74L.97 13.04C2.45 15.98 5.48 18 9 18z"/></svg>
-      Sign in with Google
-    </button>
-    <button onclick="continueAsGuest()" style="width:100%;background:#fff;color:#666;border:1px solid #ddd;border-radius:7px;padding:11px;font-size:14px;cursor:pointer">Continue without signing in</button>
-    <p style="font-size:11px;color:#aaa;margin-top:12px">You can solve puzzles without signing in — progress just won't be saved.</p>
-  </div>
-</div>
-
-<!-- User bar (top right when signed in) -->
-<div id="user-bar" style="display:none;position:fixed;top:0;right:0;z-index:100;padding:8px 16px;display:flex;align-items:center;gap:8px;font-size:12px;color:#fff;background:rgba(119,68,187,0.9);border-bottom-left-radius:8px">
-  <span id="user-name"></span>
-  <button onclick="_auth.signOut()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer">Sign out</button>
-</div>
 </body>
 </html>
