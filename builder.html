@@ -331,6 +331,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
       <button class="tool-btn green" onclick="exportLibrary()">⬇️ Export entire library</button>
       <button class="tool-btn" onclick="document.getElementById('import-library-file').click()">⬆️ Import library</button>
       <button class="tool-btn" onclick="document.getElementById('import-file').click()">📥 Import puzzle from file</button>
+      <button class="tool-btn" onclick="exportWebDirectory()">⬇️ Export web directory to file</button>
       <input type="file" id="import-library-file" accept=".json" style="display:none" onchange="importLibrary(event)">
       <input type="file" id="import-file" accept=".html,.json" style="display:none" onchange="importPuzzle(event)">
       <span id="library-count" style="font-size:12px;color:#888"></span>
@@ -2176,24 +2177,28 @@ async function deleteFromDir(i){
 
 
 // ── Published puzzles list ────────────────────────────────────────────────────
+function _esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
 async function loadPublishedList() {
   const wrap = document.getElementById('published-list');
+  if (!wrap) return;
   wrap.innerHTML = '<em style="font-size:12px;color:#aaa">Loading…</em>';
   try {
-    const list = await cloudGetPuzzles();
+    // Use cloudGetIndex for fast load (titles/sizes only, no grid data)
+    const list = await cloudGetIndex();
     if (!list || !list.length) {
       wrap.innerHTML = '<em style="font-size:12px;color:#999">No puzzles published yet.</em>';
       return;
     }
-    wrap.innerHTML = list.map((p, i) => `
+    wrap.innerHTML = list.map(p => `
       <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0ecff;flex-wrap:wrap">
-        <span style="flex:1;font-size:13px;font-weight:600;color:#443366;min-width:140px">${escHtml(p.title||'Untitled')}</span>
+        <span style="flex:1;font-size:13px;font-weight:600;color:#443366;min-width:140px">${_esc(p.title||'Untitled')}</span>
         <span style="font-size:11px;color:#aaa">${p.publishedAt||''}</span>
-        ${p.cols&&p.rows?`<span style="font-size:11px;color:#888;background:#f0ecff;padding:1px 8px;border-radius:4px">${p.cols}×${p.rows}</span>`:''}
-        <button class="tool-btn" style="font-size:11px;padding:3px 10px" onclick="loadPublishedPuzzle('${p.id}')">📥 Load & edit</button>
+        ${p.cols&&p.rows?'<span style="font-size:11px;color:#888;background:#f0ecff;padding:1px 8px;border-radius:4px">'+p.cols+'×'+p.rows+'</span>':''}
+        <button class="tool-btn" style="font-size:11px;padding:3px 10px" onclick="loadPublishedPuzzle('${p.id}')">📥 Load &amp; edit</button>
       </div>`).join('');
   } catch(e) {
-    wrap.innerHTML = `<em style="font-size:12px;color:#c00">Could not load: ${escHtml(e.message)}</em>`;
+    wrap.innerHTML = '<em style="font-size:12px;color:#c00">Could not load: '+_esc(e.message)+'</em>';
   }
 }
 
@@ -2220,6 +2225,19 @@ function loadFromData(data, name) {
   updatePuzzleTitle();
 }
 
+
+async function exportWebDirectory() {
+  try {
+    const list = await cloudGetPuzzles();
+    if (!list || !list.length) { alert('No published puzzles to export.'); return; }
+    const json = JSON.stringify(list, null, 2);
+    const blob = new Blob([json], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'arrowword-web-directory-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click(); URL.revokeObjectURL(url);
+  } catch(e) { alert('Export failed: ' + e.message); }
+}
 // ── Init ──────────────────────────────────────────────────────────────────────
 buildDirGrid('dir-grid','m-dir',32,checkFit);
 buildGrid();
