@@ -307,7 +307,11 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
     <h3>🌐 Published puzzles (web directory)</h3>
     <div class="info" style="margin-bottom:10px">Puzzles published on the web. Load any into the builder to edit from any device.</div>
     <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button class="tool-btn" onclick="loadPublishedList()">↻ Refresh published list</button>
+      <button class="tool-btn" onclick="loadPublishedList()">↻ Refresh</button>
+      <select id="pub-sort" onchange="renderPublishedList()" style="padding:5px 8px;font-size:12px;border:1px solid #ccc;border-radius:5px">
+        <option value="alpha">A–Z</option>
+        <option value="newest">Newest first</option>
+      </select>
     </div>
     <div id="published-list"><em style="font-size:12px;color:#999">Click Refresh to load published puzzles.</em></div>
   </div>
@@ -2105,7 +2109,7 @@ document.querySelectorAll('.modal-bg').forEach(function(m){
 });
 
 
-// ── Publish to web directory (JSONBin cloud) ──────────────────────────────────
+// ── Publish to web directory ──────────────────────────────────────────────────
 async function publishToWeb(overrideName){
   const name=overrideName||(document.getElementById('puzzle-name').value||'').trim();
   if(!name){alert('Please give your puzzle a name first.\n\nType a name in the puzzle name field.');return;}
@@ -2136,7 +2140,7 @@ async function publishToWeb(overrideName){
     alert('✓ "'+name+'" published! It will appear in the directory within 1-2 minutes.');
   }catch(e){
     if(btn){btn.textContent=origText;btn.disabled=false;}
-    alert('Could not publish: '+e.message+'\n\nMake sure cloud-storage.js has your JSONBin credentials.');
+    alert('Could not publish: '+e.message);
   }
 }
 
@@ -2179,24 +2183,34 @@ async function deleteFromDir(i){
 // ── Published puzzles list ────────────────────────────────────────────────────
 function _esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
+let _pubList = [];
+function renderPublishedList() {
+  const wrap = document.getElementById('published-list');
+  if (!wrap || !_pubList.length) return;
+  const sort = (document.getElementById('pub-sort')||{}).value || 'alpha';
+  const list = [..._pubList].sort((a,b) => sort === 'newest'
+    ? (b.publishedAtMs||0) - (a.publishedAtMs||0)
+    : (a.title||'').localeCompare(b.title||''));
+  wrap.innerHTML = list.map(p => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0ecff;flex-wrap:wrap">
+      <span style="flex:1;font-size:13px;font-weight:600;color:#443366;min-width:140px">${_esc(p.title||'Untitled')}</span>
+      <span style="font-size:11px;color:#aaa">${p.publishedAt||''}</span>
+      ${p.cols&&p.rows?'<span style="font-size:11px;color:#888;background:#f0ecff;padding:1px 8px;border-radius:4px">'+p.cols+'×'+p.rows+'</span>':''}
+      <button class="tool-btn" style="font-size:11px;padding:3px 10px" onclick="loadPublishedPuzzle('${p.id}')">📥 Load &amp; edit</button>
+    </div>`).join('');
+}
+
 async function loadPublishedList() {
   const wrap = document.getElementById('published-list');
   if (!wrap) return;
   wrap.innerHTML = '<em style="font-size:12px;color:#aaa">Loading…</em>';
   try {
-    // Use cloudGetIndex for fast load (titles/sizes only, no grid data)
-    const list = await cloudGetIndex();
-    if (!list || !list.length) {
+    _pubList = await cloudGetIndex();
+    if (!_pubList || !_pubList.length) {
       wrap.innerHTML = '<em style="font-size:12px;color:#999">No puzzles published yet.</em>';
       return;
     }
-    wrap.innerHTML = list.map(p => `
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0ecff;flex-wrap:wrap">
-        <span style="flex:1;font-size:13px;font-weight:600;color:#443366;min-width:140px">${_esc(p.title||'Untitled')}</span>
-        <span style="font-size:11px;color:#aaa">${p.publishedAt||''}</span>
-        ${p.cols&&p.rows?'<span style="font-size:11px;color:#888;background:#f0ecff;padding:1px 8px;border-radius:4px">'+p.cols+'×'+p.rows+'</span>':''}
-        <button class="tool-btn" style="font-size:11px;padding:3px 10px" onclick="loadPublishedPuzzle('${p.id}')">📥 Load &amp; edit</button>
-      </div>`).join('');
+    renderPublishedList();
   } catch(e) {
     wrap.innerHTML = '<em style="font-size:12px;color:#c00">Could not load: '+_esc(e.message)+'</em>';
   }
