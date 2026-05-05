@@ -130,3 +130,53 @@ async function sbAdminGetAllUsers() {
   if (error) { console.error('Admin users query error:', error); return []; }
   return data || [];
 }
+
+// ── Rating API ────────────────────────────────────────────────────────────────
+async function sbSaveRating(puzzleId, rating) {
+  if (!_sb || !_user) return false;
+  // Save to user progress
+  await _sb.from('user_progress').upsert({
+    user_id: _user.id, puzzle_id: puzzleId, rating,
+    last_saved: new Date().toISOString()
+  }, { onConflict: 'user_id,puzzle_id' });
+  // Update aggregate ratings table
+  const { data } = await _sb.from('puzzle_ratings').select('*').eq('puzzle_id', puzzleId).single();
+  if (data) {
+    await _sb.from('puzzle_ratings').update({
+      total_ratings: data.total_ratings + 1,
+      sum_ratings: data.sum_ratings + rating,
+      avg_rating: ((data.sum_ratings + rating) / (data.total_ratings + 1)).toFixed(2)
+    }).eq('puzzle_id', puzzleId);
+  } else {
+    await _sb.from('puzzle_ratings').insert({
+      puzzle_id: puzzleId, total_ratings: 1, sum_ratings: rating, avg_rating: rating
+    });
+  }
+  return true;
+}
+
+async function sbGetRatings() {
+  if (!_sb) return {};
+  const { data } = await _sb.from('puzzle_ratings').select('*');
+  const result = {};
+  (data || []).forEach(r => { result[r.puzzle_id] = r; });
+  return result;
+}
+
+async function sbSaveTimeSpent(puzzleId, seconds) {
+  if (!_sb || !_user) return;
+  const { data } = await _sb.from('user_progress').select('time_spent_seconds')
+    .eq('user_id', _user.id).eq('puzzle_id', puzzleId).single();
+  const existing = (data && data.time_spent_seconds) || 0;
+  await _sb.from('user_progress').upsert({
+    user_id: _user.id, puzzle_id: puzzleId,
+    time_spent_seconds: existing + seconds,
+    last_saved: new Date().toISOString()
+  }, { onConflict: 'user_id,puzzle_id' });
+}
+
+async function sbAdminGetRatings() {
+  if (!_sb) return [];
+  const { data } = await _sb.from('puzzle_ratings').select('*');
+  return data || [];
+}

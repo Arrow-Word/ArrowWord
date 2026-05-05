@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="favicon.png">
 <title>Admin Dashboard — Arrow Word Puzzles</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -71,8 +72,14 @@ tr:hover td{background:#faf8ff}
   </table>
   <h2>📊 Puzzle activity</h2>
   <table id="activity-table">
-    <thead><tr><th>User</th><th>Puzzle</th><th>Status</th><th>Checks used</th><th>Last saved</th></tr></thead>
+    <thead><tr><th>User</th><th>Puzzle</th><th>Status</th><th>Time spent</th><th>Rating</th><th>Checks used</th><th>Last saved</th></tr></thead>
     <tbody><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
+  </table>
+
+  <h2>⭐ Puzzle ratings</h2>
+  <table id="ratings-table">
+    <thead><tr><th>Puzzle</th><th>Avg rating</th><th>Total ratings</th></tr></thead>
+    <tbody id="ratings-body"><tr><td colspan="3" class="loading">Loading…</td></tr></tbody>
   </table>
 </div>
 
@@ -102,10 +109,11 @@ async function loadStats(){
   while(typeof sbAdminGetAllProgress==='undefined'&&attempts++<30) await new Promise(r=>setTimeout(r,200));
 
   try {
-    const [progress, users, puzzles] = await Promise.all([
+    const [progress, users, puzzles, ratings] = await Promise.all([
       sbAdminGetAllProgress(),
       sbAdminGetAllUsers(),
-      cloudGetIndex()
+      cloudGetIndex(),
+    sbAdminGetRatings().catch(()=>[])
     ]);
 
     const totalComplete = progress.filter(p=>p.complete).length;
@@ -148,15 +156,27 @@ async function loadStats(){
         const u=userMap[p.user_id];
         const userName=u?(u.display_name||u.email||'Unknown'):'Unknown';
         const badge=p.complete?'<span class="badge b-complete">✓ Complete</span>':'<span class="badge b-progress">⏳ In progress</span>';
-        return`<tr>
+        const mins = p.time_spent_seconds ? Math.floor(p.time_spent_seconds/60)+'m '+((p.time_spent_seconds||0)%60)+'s' : '—';
+      const stars = p.rating ? '★'.repeat(p.rating)+'☆'.repeat(5-p.rating) : '—';
+      return`<tr>
           <td>${userName}</td>
           <td>${puzzleMap[p.puzzle_id]||p.puzzle_id}</td>
           <td>${badge}</td>
+          <td>${mins}</td>
+          <td style="color:#f0a500">${stars}</td>
           <td>${p.check_count||0}</td>
           <td>${p.last_saved?new Date(p.last_saved).toLocaleDateString('en-ZA'):'—'}</td>
         </tr>`;
       }).join('');
     }
+  // Ratings table
+    const rBody = document.getElementById('ratings-body');
+    if (!ratings.length) { rBody.innerHTML = '<tr><td colspan="3" style="color:#aaa;font-style:italic">No ratings yet.</td></tr>'; }
+    else rBody.innerHTML = ratings.map(r => `<tr>
+      <td>${puzzleMap[r.puzzle_id]||r.puzzle_id}</td>
+      <td style="color:#f0a500">${'★'.repeat(Math.round(r.avg_rating))}${'☆'.repeat(5-Math.round(r.avg_rating))} ${parseFloat(r.avg_rating).toFixed(1)}</td>
+      <td>${r.total_ratings}</td>
+    </tr>`).join('');
   } catch(e) {
     document.getElementById('stats-row').innerHTML=`<div style="color:#c00;padding:12px">Error loading stats: ${e.message}</div>`;
   }

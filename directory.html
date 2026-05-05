@@ -7,6 +7,8 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puzzle Directory — Arrow Word Puzzles</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
 <!--
   Arrow Word Puzzles
   ══════════════════════════════════════════════════════
@@ -169,6 +171,20 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
   td.t-black{background:#333!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .solve-input{display:none}
 }
+
+.solver-timer{font-size:13px;color:#e8d8ff;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:12px;font-variant-numeric:tabular-nums;min-width:60px;text-align:center}
+.rating-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:400;align-items:center;justify-content:center;padding:16px}
+.rating-modal.open{display:flex}
+.rating-box{background:#fff;border-radius:14px;padding:28px;max-width:380px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+.rating-box h2{font-size:18px;font-weight:700;color:#443366;margin-bottom:8px}
+.rating-box p{font-size:13px;color:#666;margin-bottom:20px}
+.stars{display:flex;justify-content:center;gap:8px;margin-bottom:20px}
+.star{font-size:40px;cursor:pointer;opacity:0.3;transition:opacity .15s,transform .1s}
+.star.active{opacity:1}
+.star:hover{transform:scale(1.15)}
+.btn-rate{background:#7744bb;color:#fff;border:none;border-radius:7px;padding:11px 28px;font-size:14px;font-weight:600;cursor:pointer;margin-right:8px}
+.btn-skip{background:#fff;color:#888;border:1px solid #ddd;border-radius:7px;padding:10px 20px;font-size:13px;cursor:pointer}
+.puzzle-rating{font-size:11px;color:#f0a500;margin-top:2px}
 </style>
 </head>
 <body>
@@ -233,7 +249,7 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
   <div class="solver-box" id="solver-box">
     <div class="solver-header">
       <h2 id="solver-title">Puzzle</h2>
-      <button class="solver-close" onclick="closeSolver()">✕ Close</button>
+      <span class="solver-timer" id="solver-timer">0:00</span><button class="solver-close" onclick="closeSolver()">✕ Close</button>
     </div>
     <div class="solver-body">
       <div class="solve-toolbar">
@@ -320,6 +336,7 @@ sbOnUserChanged(async user => {
     // Load cloud progress
     try {
       _cloudProgress = await sbLoadAllProgress();
+    _puzzleRatings = await sbGetRatings().catch(()=>({}));
       renderDir();
     } catch(e) { console.warn('Progress load failed:', e); }
   } else {
@@ -454,6 +471,7 @@ function cardHtml(p) {
   return `<div class="pcard">${badge}
     <div class="pcard-title">${escHtml(title)}</div>
     <div class="pcard-meta">Published ${p.publishedAt || ''}</div>
+    ${_puzzleRatings[p.id] ? `<div class="puzzle-rating">${'★'.repeat(Math.round(_puzzleRatings[p.id].avg_rating))}${'☆'.repeat(5-Math.round(_puzzleRatings[p.id].avg_rating))} ${parseFloat(_puzzleRatings[p.id].avg_rating).toFixed(1)}</div>` : ''}
     ${p.cols && p.rows ? `<div class="pcard-size">${p.cols}×${p.rows} grid</div>` : ''}
     <button class="btn-solve" onclick="solveClicked('${p.id}')">${btnLabel}</button>
   </div>`;
@@ -472,6 +490,9 @@ function gridWrapClick(e) {
 async function openSolver(id) {
   sCurPuzzleId = id;
   _checkCounts[id] = _checkCounts[id] || 0;
+  resetTimer();
+  startAutoSave();
+  _lastSavedAnswers = '';
   document.getElementById('solver-title').textContent = 'Loading…';
   document.getElementById('solver-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -506,11 +527,22 @@ async function openSolver(id) {
   }
 }
 
-function closeSolver() {
+async function closeSolver() {
+  // Auto-save on close
+  if (sCurPuzzleId) {
+    const answers = {};
+    document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
+      if (inp.value) answers[inp.dataset.r + ',' + inp.dataset.c] = inp.value;
+    });
+    if (Object.keys(answers).length > 0) await _silentSave(answers);
+    if (sbGetUser() && _timerSeconds > 0) await sbSaveTimeSpent(sCurPuzzleId, _timerSeconds % 60);
+  }
+  stopTimer(); stopAutoSave();
   document.getElementById('solver-overlay').classList.remove('open');
   document.body.style.overflow = '';
   history.replaceState(null, '', 'directory.html');
   sActive = null; sCurPuzzleId = null;
+  renderDir();
 }
 
 async function saveProgress() {
@@ -577,7 +609,7 @@ function buildSolverGrid(data) {
         const inp=document.createElement('input');inp.className='solve-input';inp.type='text';inp.maxLength=1;
         inp.dataset.r=r;inp.dataset.c=c;inp.style.fontSize=Math.round(cSz*0.38)+'px';
         inp.setAttribute('autocapitalize','characters');inp.setAttribute('autocomplete','off');inp.setAttribute('autocorrect','off');inp.setAttribute('spellcheck','false');
-        inp.addEventListener('input',sSolveInput);inp.addEventListener('keydown',sSolveKeydown);inp.addEventListener('focus',sSolveFocus);
+        inp.addEventListener('input',e=>{startTimer();sSolveInput(e);});inp.addEventListener('keydown',sSolveKeydown);inp.addEventListener('focus',e=>{startTimer();sSolveFocus(e);});
         td.appendChild(inp);
       }else{td.className='t-empty';}
       tr.appendChild(td);
@@ -643,6 +675,8 @@ async function sMaybeCelebrate(){
     renderDir();
   }
   document.getElementById('celebrate').style.display='flex';
+  stopTimer(); stopAutoSave();
+  setTimeout(()=>{ document.getElementById('celebrate').style.display='none'; showRatingModal(); }, 2500);
 }
 async function solverCheck(){
   let wrong=0,filled=0;
@@ -668,8 +702,126 @@ function sSetZoom(z){sCurZoom=Math.max(0.25,Math.min(3,z));sApplyZoom();}
 function sZoomBy(d){sSetZoom(sCurZoom+d);}
 function sZoomFit(){const wrap=document.getElementById('s-grid-wrap');const tbl=document.getElementById('s-grid');if(!wrap||!tbl||!tbl.offsetWidth)return;sSetZoom(Math.min(1,(wrap.clientWidth-20)/tbl.offsetWidth));}
 
+
+// ── Timer ─────────────────────────────────────────────────────────────────────
+let _timerInterval = null;
+let _timerSeconds = 0;
+let _timerStarted = false;
+
+function startTimer() {
+  if (_timerStarted) return;
+  _timerStarted = true;
+  _timerInterval = setInterval(() => {
+    _timerSeconds++;
+    const m = Math.floor(_timerSeconds / 60);
+    const s = _timerSeconds % 60;
+    const el = document.getElementById('solver-timer');
+    if (el) el.textContent = m + ':' + String(s).padStart(2,'0');
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(_timerInterval);
+  _timerInterval = null;
+}
+
+function resetTimer() {
+  stopTimer();
+  _timerSeconds = 0;
+  _timerStarted = false;
+  const el = document.getElementById('solver-timer');
+  if (el) el.textContent = '0:00';
+}
+
+// ── Auto-save ─────────────────────────────────────────────────────────────────
+let _autoSaveInterval = null;
+let _lastSavedAnswers = '';
+
+function startAutoSave() {
+  stopAutoSave();
+  _autoSaveInterval = setInterval(() => {
+    const answers = {};
+    document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
+      if (inp.value) answers[inp.dataset.r + ',' + inp.dataset.c] = inp.value;
+    });
+    const snapshot = JSON.stringify(answers);
+    if (snapshot !== _lastSavedAnswers && Object.keys(answers).length > 0) {
+      _lastSavedAnswers = snapshot;
+      _silentSave(answers);
+    }
+  }, 60000);
+}
+
+function stopAutoSave() {
+  clearInterval(_autoSaveInterval);
+  _autoSaveInterval = null;
+}
+
+async function _silentSave(answers) {
+  if (!sCurPuzzleId) return;
+  const local = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
+  local[sCurPuzzleId] = { answers, savedAt: Date.now() };
+  localStorage.setItem('arrowword_progress', JSON.stringify(local));
+  if (sbGetUser()) {
+    await sbSaveProgress(sCurPuzzleId, answers, false, _checkCounts[sCurPuzzleId] || 0);
+    await sbSaveTimeSpent(sCurPuzzleId, 60);
+    _cloudProgress[sCurPuzzleId] = { complete: false };
+  }
+}
+
+// ── Ratings ───────────────────────────────────────────────────────────────────
+let _selectedRating = 0;
+let _puzzleRatings = {};
+
+function setStar(v) {
+  _selectedRating = v;
+  document.querySelectorAll('.star').forEach(s => {
+    s.classList.toggle('active', +s.dataset.v <= v);
+  });
+}
+
+async function submitRating() {
+  if (!_selectedRating) { alert('Please select a star rating.'); return; }
+  if (sbGetUser() && sCurPuzzleId) {
+    await sbSaveRating(sCurPuzzleId, _selectedRating);
+    _puzzleRatings[sCurPuzzleId] = { avg_rating: _selectedRating };
+  }
+  closeRating();
+  renderDir();
+}
+
+function closeRating() {
+  document.getElementById('rating-modal').classList.remove('open');
+  _selectedRating = 0;
+  document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
+}
+
+function showRatingModal() {
+  if (!sbGetUser()) return; // only for signed-in users
+  document.getElementById('rating-modal').classList.add('open');
+}
+
 loadDir();
 (function(){const id=new URLSearchParams(location.search).get('id');if(id)setTimeout(()=>solveClicked(id),300);})();
 </script>
+
+<div class="rating-modal" id="rating-modal">
+  <div class="rating-box">
+    <div style="font-size:36px;margin-bottom:8px">⭐</div>
+    <h2>Rate this puzzle</h2>
+    <p>How did you find it? Your feedback helps improve future puzzles.</p>
+    <div class="stars" id="stars">
+      <span class="star" data-v="1" onclick="setStar(1)">★</span>
+      <span class="star" data-v="2" onclick="setStar(2)">★</span>
+      <span class="star" data-v="3" onclick="setStar(3)">★</span>
+      <span class="star" data-v="4" onclick="setStar(4)">★</span>
+      <span class="star" data-v="5" onclick="setStar(5)">★</span>
+    </div>
+    <div>
+      <button class="btn-rate" onclick="submitRating()">Submit rating</button>
+      <button class="btn-skip" onclick="closeRating()">Skip</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
