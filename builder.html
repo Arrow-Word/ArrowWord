@@ -308,6 +308,14 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
     <div id="saved-list"><em style="font-size:12px;color:#999">No saved puzzles yet.</em></div>
   </div>
   <div class="save-section">
+    <h3>🌐 Published puzzles (web directory)</h3>
+    <div class="info" style="margin-bottom:10px">Puzzles currently published on the web. Load any of these into the builder to edit and republish — works on any device.</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="tool-btn" onclick="loadPublishedList()">↻ Refresh published list</button>
+    </div>
+    <div id="published-list"><em style="font-size:12px;color:#999">Click Refresh to load published puzzles.</em></div>
+  </div>
+  <div class="save-section">
     <h3>🌐 Publish to web directory</h3>
     <div class="info" style="margin-bottom:10px">Publish the current puzzle to the live web directory so anyone can find and solve it online.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -2163,6 +2171,51 @@ async function deleteFromDir(i){
     if(btn){btn.textContent=origText;btn.disabled=false;}
     alert('Could not remove: '+e.message);
   }
+}
+
+
+// ── Published puzzles list ────────────────────────────────────────────────────
+async function loadPublishedList() {
+  const wrap = document.getElementById('published-list');
+  wrap.innerHTML = '<em style="font-size:12px;color:#aaa">Loading…</em>';
+  try {
+    const list = await cloudGetPuzzles();
+    if (!list || !list.length) {
+      wrap.innerHTML = '<em style="font-size:12px;color:#999">No puzzles published yet.</em>';
+      return;
+    }
+    wrap.innerHTML = list.map((p, i) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0ecff;flex-wrap:wrap">
+        <span style="flex:1;font-size:13px;font-weight:600;color:#443366;min-width:140px">${escHtml(p.title||'Untitled')}</span>
+        <span style="font-size:11px;color:#aaa">${p.publishedAt||''}</span>
+        ${p.cols&&p.rows?`<span style="font-size:11px;color:#888;background:#f0ecff;padding:1px 8px;border-radius:4px">${p.cols}×${p.rows}</span>`:''}
+        <button class="tool-btn" style="font-size:11px;padding:3px 10px" onclick="loadPublishedPuzzle('${p.id}')">📥 Load & edit</button>
+      </div>`).join('');
+  } catch(e) {
+    wrap.innerHTML = `<em style="font-size:12px;color:#c00">Could not load: ${escHtml(e.message)}</em>`;
+  }
+}
+
+async function loadPublishedPuzzle(id) {
+  if (!confirm('Load this published puzzle into the builder?\n\nThis will replace what you are currently editing. Save your current work first if needed.')) return;
+  try {
+    const entry = await cloudGetPuzzle(id);
+    if (!entry || !entry.data) throw new Error('Puzzle data not found');
+    loadFromData(entry.data, entry.title);
+    // Switch to Design tab
+    switchTab('design');
+    document.getElementById('puzzle-name').value = entry.title || '';
+    alert('✓ "' + entry.title + '" loaded. Edit it and click 🌐 Publish to web to save your changes.');
+  } catch(e) {
+    alert('Could not load puzzle: ' + e.message);
+  }
+}
+
+function loadFromData(data, name) {
+  // Use the existing dataToGrid function which handles all grid setup correctly
+  document.getElementById('puzzle-name').value = name || '';
+  dataToGrid(data);
+  updatePuzzleTitle();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
