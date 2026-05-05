@@ -315,14 +315,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
     <h3>Saved puzzles</h3>
     <div id="saved-list"><em style="font-size:12px;color:#999">No saved puzzles yet.</em></div>
   </div>
-  <div class="save-section">
-    <h3>🌐 Published puzzles (web directory)</h3>
-    <div class="info" style="margin-bottom:10px">Puzzles currently published on the web. Load any of these into the builder to edit and republish — works on any device.</div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button class="tool-btn" onclick="loadPublishedList()">↻ Refresh published list</button>
-    </div>
-    <div id="published-list"><em style="font-size:12px;color:#999">Click Refresh to load published puzzles.</em></div>
-  </div>
+
   <div class="save-section">
     <h3>🌐 Publish to web directory</h3>
     <div class="info" style="margin-bottom:10px">Publish the current puzzle to the live web directory so anyone can find and solve it online.</div>
@@ -946,7 +939,7 @@ function switchTab(name){
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===name));
   tabs.forEach(n=>{const el=document.getElementById('tab-'+n);if(el)el.classList.toggle('active',n===name);});
   if(name==='solve')buildSolve();
-  if(name==='manage')renderSavedList();
+  if(name==='manage'){renderSavedList();loadPublishedList();}
   if(name==='newpuzzle'){
     // Pre-fill the puzzle name field on the New Puzzle tab from the current
     // saved name (if any) so it's easy to base the next puzzle on the same
