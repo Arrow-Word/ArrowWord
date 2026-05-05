@@ -58,12 +58,6 @@ tr:hover td{background:#faf8ff}
 </div>
 
 <div id="main">
-  <div class="clear-section">
-    <h3>🗑 Danger zone — clear all published puzzles</h3>
-    <p style="font-size:12px;color:#888;margin-bottom:10px">This permanently removes all puzzles from the public directory. Builder saved puzzles are NOT affected.</p>
-    <button class="btn-clear" onclick="clearAllPuzzles()">Clear all puzzles from directory</button>
-    <span id="clear-status" style="font-size:12px;margin-left:10px;color:#888"></span>
-  </div>
   <div class="stats-row" id="stats-row"><div class="loading">Loading stats…</div></div>
   <h2>👥 Registered users</h2>
   <table id="users-table">
@@ -81,6 +75,14 @@ tr:hover td{background:#faf8ff}
     <thead><tr><th>Puzzle</th><th>Avg rating</th><th>Total ratings</th></tr></thead>
     <tbody id="ratings-body"><tr><td colspan="3" class="loading">Loading…</td></tr></tbody>
   </table>
+  <hr style="border:none;border-top:2px solid #f4a8a8;margin:40px 0 24px">
+  <div class="clear-section">
+    <h3>🗑 Danger zone — clear all published puzzles</h3>
+    <p style="font-size:12px;color:#888;margin-bottom:10px">This permanently removes all puzzles from the public directory. Builder saved puzzles are NOT affected.</p>
+    <button class="btn-clear" onclick="clearAllPuzzles()">Clear all puzzles from directory</button>
+    <span id="clear-status" style="font-size:12px;margin-left:10px;color:#888"></span>
+  </div>
+
 </div>
 
 <script src="supabase-auth.js"></script>

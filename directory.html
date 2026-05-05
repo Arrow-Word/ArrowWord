@@ -488,6 +488,8 @@ async function openSolver(id) {
   resetTimer();
   startAutoSave();
   _lastSavedAnswers = '';
+  // Restore time from cloud
+  if (sbGetUser()) { sbLoadProgress(id).then(p => { if (p && p.time_spent_seconds) { _timerSeconds = p.time_spent_seconds; const m=Math.floor(_timerSeconds/60),s=_timerSeconds%60; const el=document.getElementById('solver-timer'); if(el) el.textContent=m+':'+String(s).padStart(2,'0'); } }); }
   document.getElementById('solver-title').textContent = 'Loading…';
   document.getElementById('solver-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -644,12 +646,15 @@ function sSolveKeydown(e){
   else if(e.key==='Escape'){sActive=null;sHighlight();inp.blur();}
 }
 async function sMaybeCelebrate(){
-  const inputs=document.querySelectorAll('#s-grid td.t-answer input');if(!inputs.length)return;
-  for(let i=0;i<inputs.length;i++){
-    const r=+inputs[i].dataset.r,c=+inputs[i].dataset.c;
-    const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));if(!w)return;
-    const idx=w.cells.findIndex(([a,b])=>a===r&&b===c);
-    if((inputs[i].value||'').toUpperCase()!==w.ans[idx])return;
+  // Check every word is fully and correctly filled — works for all grid sizes
+  if(!sWords.length)return;
+  for(let wi=0;wi<sWords.length;wi++){
+    const w=sWords[wi];
+    for(let ci=0;ci<w.cells.length;ci++){
+      const [r,col]=w.cells[ci];
+      const inp=sGetInp(r,col);
+      if(!inp||(inp.value||'').toUpperCase()!==w.ans[ci])return;
+    }
   }
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
   sActive=null;sHighlight();
