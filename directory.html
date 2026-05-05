@@ -226,16 +226,15 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 <!-- Sign-in modal -->
 <div id="signin-modal">
   <div class="signin-box">
-    <div style="font-size:40px;margin-bottom:12px">🧩</div>
+    <img src="favicon.png" style="width:80px;height:80px;border-radius:16px;margin-bottom:12px;object-fit:cover">
     <h2>Sign in to track your progress</h2>
-    <p>Sign in to save which puzzles you've completed and pick up where you left off — on any device, any browser.<br><br>Or continue as a guest — you can still solve puzzles, but progress won't be saved.</p>
+    <p>Sign in to save your progress and pick up where you left off — on any device, any browser. Your puzzle history is saved to your account.</p>
     <button class="btn-google" onclick="doSignIn('google')">
       <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Continue with Google
     </button>
 
-    <button class="btn-guest" onclick="continueAsGuest()">Continue without signing in</button>
-    <p class="signin-note">Signing in uses your existing Google account — no new password needed. We only store your puzzle progress.</p>
+<p class="signin-note">Sign in with your Google account to track your progress across devices. We only store your puzzle progress — nothing else.</p>
   </div>
 </div>
 
@@ -356,8 +355,7 @@ function continueAsGuest() {
 
 function solveClicked(id) {
   const user = sbGetUser();
-  const isGuest = sessionStorage.getItem('guest_mode');
-  if (user || isGuest) {
+  if (user) {
     openSolver(id);
   } else {
     _pendingSolverId = id;
@@ -376,7 +374,10 @@ sbOnUserChanged(user => {
 
 // ── Progress helpers ──────────────────────────────────────────────────────────
 function getPuzzleStatus(id) {
-  if (_cloudProgress[id]) return _cloudProgress[id].complete ? 'complete' : 'inprogress';
+  // Cloud is authoritative
+  if (_cloudProgress[id] && _cloudProgress[id].complete) return 'complete';
+  if (_cloudProgress[id]) return 'inprogress';
+  // Fall back to localStorage
   const complete = JSON.parse(localStorage.getItem('arrowword_complete') || '{}');
   if (complete[id]) return 'complete';
   const progress = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
@@ -527,11 +528,14 @@ async function openSolver(id) {
 async function closeSolver() {
   // Auto-save on close
   if (sCurPuzzleId) {
-    const answers = {};
-    document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
-      if (inp.value) answers[inp.dataset.r + ',' + inp.dataset.c] = inp.value;
-    });
-    if (Object.keys(answers).length > 0) await _silentSave(answers);
+    const alreadyDone = _cloudProgress[sCurPuzzleId] && _cloudProgress[sCurPuzzleId].complete;
+    if (!alreadyDone) {
+      const answers = {};
+      document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
+        if (inp.value) answers[inp.dataset.r + ',' + inp.dataset.c] = inp.value;
+      });
+      if (Object.keys(answers).length > 0) await _silentSave(answers);
+    }
     if (sbGetUser() && _timerSeconds > 0) await sbSaveTimeSpent(sCurPuzzleId, _timerSeconds % 60);
   }
   stopTimer(); stopAutoSave();
@@ -555,7 +559,9 @@ async function saveProgress() {
   // Save to cloud if signed in
   if (sbGetUser()) {
     await sbSaveProgress(sCurPuzzleId, answers, false, _checkCounts[sCurPuzzleId] || 0);
-    _cloudProgress[sCurPuzzleId] = { complete: false };
+    if (!_cloudProgress[sCurPuzzleId] || !_cloudProgress[sCurPuzzleId].complete) {
+      _cloudProgress[sCurPuzzleId] = { complete: false };
+    }
   }
   renderDir();
   const btn = document.querySelector('.solve-toolbar-left .blue');
@@ -759,6 +765,9 @@ function stopAutoSave() {
 
 async function _silentSave(answers) {
   if (!sCurPuzzleId) return;
+  // Never overwrite a completed puzzle with in-progress
+  const alreadyComplete = _cloudProgress[sCurPuzzleId] && _cloudProgress[sCurPuzzleId].complete;
+  if (alreadyComplete) return;
   const local = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
   local[sCurPuzzleId] = { answers, savedAt: Date.now() };
   localStorage.setItem('arrowword_progress', JSON.stringify(local));
