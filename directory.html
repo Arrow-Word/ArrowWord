@@ -376,7 +376,10 @@ sbOnUserChanged(user => {
 
 // ── Progress helpers ──────────────────────────────────────────────────────────
 function getPuzzleStatus(id) {
-  if (_cloudProgress[id]) return _cloudProgress[id].complete ? 'complete' : 'inprogress';
+  // Cloud is authoritative
+  if (_cloudProgress[id] && _cloudProgress[id].complete) return 'complete';
+  if (_cloudProgress[id]) return 'inprogress';
+  // Fall back to localStorage
   const complete = JSON.parse(localStorage.getItem('arrowword_complete') || '{}');
   if (complete[id]) return 'complete';
   const progress = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
@@ -527,11 +530,14 @@ async function openSolver(id) {
 async function closeSolver() {
   // Auto-save on close
   if (sCurPuzzleId) {
-    const answers = {};
-    document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
-      if (inp.value) answers[inp.dataset.r + ',' + inp.dataset.c] = inp.value;
-    });
-    if (Object.keys(answers).length > 0) await _silentSave(answers);
+    const alreadyDone = _cloudProgress[sCurPuzzleId] && _cloudProgress[sCurPuzzleId].complete;
+    if (!alreadyDone) {
+      const answers = {};
+      document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
+        if (inp.value) answers[inp.dataset.r + ',' + inp.dataset.c] = inp.value;
+      });
+      if (Object.keys(answers).length > 0) await _silentSave(answers);
+    }
     if (sbGetUser() && _timerSeconds > 0) await sbSaveTimeSpent(sCurPuzzleId, _timerSeconds % 60);
   }
   stopTimer(); stopAutoSave();
@@ -555,7 +561,9 @@ async function saveProgress() {
   // Save to cloud if signed in
   if (sbGetUser()) {
     await sbSaveProgress(sCurPuzzleId, answers, false, _checkCounts[sCurPuzzleId] || 0);
-    _cloudProgress[sCurPuzzleId] = { complete: false };
+    if (!_cloudProgress[sCurPuzzleId] || !_cloudProgress[sCurPuzzleId].complete) {
+      _cloudProgress[sCurPuzzleId] = { complete: false };
+    }
   }
   renderDir();
   const btn = document.querySelector('.solve-toolbar-left .blue');
@@ -759,6 +767,9 @@ function stopAutoSave() {
 
 async function _silentSave(answers) {
   if (!sCurPuzzleId) return;
+  // Never overwrite a completed puzzle with in-progress
+  const alreadyComplete = _cloudProgress[sCurPuzzleId] && _cloudProgress[sCurPuzzleId].complete;
+  if (alreadyComplete) return;
   const local = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
   local[sCurPuzzleId] = { answers, savedAt: Date.now() };
   localStorage.setItem('arrowword_progress', JSON.stringify(local));
