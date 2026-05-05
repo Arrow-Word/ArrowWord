@@ -4,8 +4,8 @@
 // Loaded by directory.html and admin.html.
 // ══════════════════════════════════════════════════════════════════════════════
 
-const SUPABASE_URL  = 'https://bfpoiewwvtdczkmoqlye.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmcG9pZXd3dnRkY3prbW9xbHllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODAxMTUsImV4cCI6MjA5MzQ1NjExNX0.EoIz2o7xg69tfAnSOp5wVusjc71s0cOmsEoSDwaxjso';
+const _AUTH_URL  = 'https://bfpoiewwvtdczkmoqlye.supabase.co';
+const _AUTH_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmcG9pZXd3dnRkY3prbW9xbHllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODAxMTUsImV4cCI6MjA5MzQ1NjExNX0.EoIz2o7xg69tfAnSOp5wVusjc71s0cOmsEoSDwaxjso';
 
 // Load Supabase SDK
 const _sbScript = document.createElement('script');
@@ -17,7 +17,7 @@ let _user = null;
 let _userCallbacks = [];
 
 _sbScript.onload = async () => {
-  _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  _sb = supabase.createClient(_AUTH_URL, _AUTH_ANON);
 
   // Handle OAuth callback (when Google redirects back to our page)
   const { data: { session } } = await _sb.auth.getSession();
