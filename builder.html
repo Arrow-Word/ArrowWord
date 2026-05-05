@@ -304,6 +304,14 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
     <div style="font-size:11px;color:#888">Puzzles are saved in your browser. To share, use <strong>Export to file</strong> below.</div>
   </div>
   <div class="save-section">
+    <h3>🌐 Published puzzles (web directory)</h3>
+    <div class="info" style="margin-bottom:10px">Puzzles published on the web. Load any into the builder to edit from any device.</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="tool-btn" onclick="loadPublishedList()">↻ Refresh published list</button>
+    </div>
+    <div id="published-list"><em style="font-size:12px;color:#999">Click Refresh to load published puzzles.</em></div>
+  </div>
+  <div class="save-section">
     <h3>Saved puzzles</h3>
     <div id="saved-list"><em style="font-size:12px;color:#999">No saved puzzles yet.</em></div>
   </div>
@@ -2199,7 +2207,8 @@ async function loadPublishedList() {
 async function loadPublishedPuzzle(id) {
   if (!confirm('Load this published puzzle into the builder?\n\nThis will replace what you are currently editing. Save your current work first if needed.')) return;
   try {
-    const entry = await cloudGetPuzzle(id);
+    const all = await cloudGetPuzzles();
+    const entry = all.find(p => p.id === id);
     if (!entry || !entry.data) throw new Error('Puzzle data not found');
     loadFromData(entry.data, entry.title);
     // Switch to Design tab
