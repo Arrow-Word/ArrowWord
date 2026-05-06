@@ -165,14 +165,11 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
 </style>
 </head>
 <body>
-<div id="builder-lock" style="display:none;position:fixed;inset:0;background:#f5f0ff;z-index:9999;align-items:center;justify-content:center;padding:24px">
-  <div style="background:#fff;border-radius:12px;border:1px solid #e0d8f0;padding:32px;width:360px;max-width:95vw;text-align:center;box-shadow:0 4px 24px rgba(119,68,187,0.12)">
-    <div style="font-size:40px;margin-bottom:12px">🔒</div>
+<div id="builder-lock" style="display:flex;position:fixed;inset:0;background:#f5f0ff;z-index:9999;align-items:center;justify-content:center;padding:24px">
+  <div style="background:#fff;border-radius:12px;border:1px solid #e0d8f0;padding:32px;width:380px;max-width:95vw;text-align:center;box-shadow:0 4px 24px rgba(119,68,187,0.12)">
+    <div style="font-size:40px;margin-bottom:12px">🔨</div>
     <h2 style="font-size:20px;font-weight:700;color:#443366;margin-bottom:8px">Puzzle Builder</h2>
-    <p style="font-size:13px;color:#888;margin-bottom:20px;line-height:1.5">Enter the password to access the builder.</p>
-    <input type="password" id="builder-pwd" placeholder="Password" style="width:100%;padding:10px 14px;font-size:15px;border:1px solid #bbb;border-radius:6px;margin-bottom:10px;text-align:center;letter-spacing:2px" onkeydown="if(event.key==='Enter')checkBuilderPwd()">
-    <button onclick="checkBuilderPwd()" style="width:100%;background:#7744bb;color:#fff;border:none;border-radius:6px;padding:12px;font-size:15px;font-weight:600;cursor:pointer">Enter</button>
-    <div id="builder-pwd-err" style="color:#dc3545;font-size:13px;margin-top:8px;min-height:18px"></div>
+    <p style="font-size:13px;color:#888;margin-bottom:20px;line-height:1.5" id="builder-lock-msg">Checking access...</p>
     <p style="font-size:12px;color:#bbb;margin-top:12px"><a href="index.html" style="color:#9966cc;text-decoration:none">← Back to home</a></p>
   </div>
 </div>
@@ -185,16 +182,39 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
     
   </div>
 </nav>
-<script src="cloud-storage.js?v=20260506"></script>
+<script src="cloud-storage.js?v=20260507"></script>
+<script src="supabase-auth.js?v=20260507"></script>
 <script>
-const BUILDER_PASSWORD = 'arrowword2024';
-const BUILDER_UNLOCK_KEY = 'builder_unlocked_v20';
-function checkBuilderPwd(){
-  const val=document.getElementById('builder-pwd').value;
-  if(val===BUILDER_PASSWORD){sessionStorage.setItem(BUILDER_UNLOCK_KEY,'1');document.getElementById('builder-lock').style.display='none';document.getElementById('builder-pwd').value='';}
-  else{document.getElementById('builder-pwd-err').textContent='Incorrect password.';document.getElementById('builder-pwd').value='';document.getElementById('builder-pwd').focus();}
+// Role-based access check for builder
+async function checkBuilderAccess() {
+  let attempts = 0;
+  while (typeof sbGetUserRole === 'undefined' && attempts++ < 50) {
+    await new Promise(r => setTimeout(r, 200));
+  }
+  
+  const user = sbGetUser();
+  if (!user) {
+    document.getElementById('builder-lock-msg').innerHTML = 'Please <a href="directory.html" style="color:#7744bb">sign in</a> to access the builder.';
+    return;
+  }
+  
+  try {
+    const role = await sbGetUserRole();
+    if (role === 'builder' || role === 'admin') {
+      document.getElementById('builder-lock').style.display = 'none';
+    } else {
+      document.getElementById('builder-lock-msg').textContent = 'You do not have builder access. Contact an admin to request access.';
+    }
+  } catch (e) {
+    console.error('Error checking role:', e);
+    document.getElementById('builder-lock-msg').textContent = 'Error checking permissions. Please refresh.';
+  }
 }
-if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder-lock').style.display='flex';}
+
+if (typeof sbOnUserChanged !== 'undefined') {
+  sbOnUserChanged(() => checkBuilderAccess());
+}
+setTimeout(() => checkBuilderAccess(), 500);
 </script>
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"

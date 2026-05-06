@@ -301,8 +301,8 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 </div>
 
 
-<script src="cloud-storage.js?v=20260506"></script>
-<script src="supabase-auth.js?v=20260506"></script>
+<script src="cloud-storage.js?v=20260507"></script>
+<script src="supabase-auth.js?v=20260507"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -483,9 +483,11 @@ function cardHtml(p) {
   const badge = status === 'complete' ? '<span class="pcard-badge badge-complete">✓ Completed</span>'
     : status === 'inprogress' ? '<span class="pcard-badge badge-inprogress">⏳ In progress</span>' : '';
   const btnLabel = status === 'inprogress' ? '▶ Continue solving' : status === 'complete' ? '↺ Solve again' : 'Solve →';
+  const builderCredit = p.builder_name ? `<div style="font-size:10px;color:#999;margin-top:2px">by ${escHtml(p.builder_name)}</div>` : '';
   return `<div class="pcard">${badge}
     <div class="pcard-title">${escHtml(title)}</div>
     <div class="pcard-meta">Published ${p.publishedAt || ''}</div>
+    ${builderCredit}
     ${_puzzleRatings[p.id] ? `<div class="puzzle-rating">${'★'.repeat(Math.round(_puzzleRatings[p.id].avg_rating))}${'☆'.repeat(5-Math.round(_puzzleRatings[p.id].avg_rating))} ${parseFloat(_puzzleRatings[p.id].avg_rating).toFixed(1)}</div>` : ''}
     ${p.cols && p.rows ? `<div class="pcard-size">${p.cols}×${p.rows} grid</div>` : ''}
     <button class="btn-solve" onclick="solveClicked('${p.id}')">${btnLabel}</button>
