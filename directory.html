@@ -165,8 +165,6 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 .solve-input.wrong{background:#ffd0d8!important;color:#a01030}
 .solve-input.in-active-word{background:#fff5b8}
 .solve-input.active-cell,.solve-input:focus.active-cell{background:#ffe680}
-#celebrate{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;align-items:center;justify-content:center;padding:16px}
-#celebrate .cel-box{background:#fff;border-radius:10px;padding:24px;width:340px;max-width:95vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
 @media print{
   nav,.page-header,main,.solve-toolbar,.zoom-bar,.solver-header{display:none!important}
   td.t-answer{background:#fff!important}
@@ -300,14 +298,6 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
   </div>
 </div>
 
-<div id="celebrate">
-  <div class="cel-box">
-    <div style="font-size:48px;margin-bottom:8px">🎉</div>
-    <h2 style="color:#1a6e1a;margin-bottom:8px">Puzzle complete!</h2>
-    <p style="font-size:14px;color:#444;margin-bottom:16px">Every letter is correct. Well done!</p>
-    <button onclick="document.getElementById('celebrate').style.display='none'" style="background:#7744bb;color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer">Close</button>
-  </div>
-</div>
 
 <script src="cloud-storage.js"></script>
 <script src="supabase-auth.js"></script>
@@ -707,9 +697,8 @@ async function sMaybeCelebrate(){
     }
     renderDir();
   }
-  document.getElementById('celebrate').style.display='flex';
   stopTimer(); stopAutoSave();
-  setTimeout(()=>{ document.getElementById('celebrate').style.display='none'; showRatingModal(); }, 2500);
+  showRatingModal();
 }
 async function solverCheck(){
   let wrong=0,filled=0;
@@ -869,7 +858,17 @@ async function submitCommentReport() {
     return;
   }
   
-  if (sbGetUser() && sCurPuzzleId) {
+  if (!sbGetUser()) {
+    alert('Please sign in to submit feedback.');
+    return;
+  }
+  
+  if (!sCurPuzzleId) {
+    alert('No puzzle selected.');
+    return;
+  }
+  
+  try {
     const success = await sbSaveComment(sCurPuzzleId, comment, type);
     if (success) {
       alert('Thank you! Your feedback has been recorded.');
@@ -877,8 +876,9 @@ async function submitCommentReport() {
     } else {
       alert('Failed to save comment. Please try again.');
     }
-  } else {
-    alert('Please sign in to submit feedback.');
+  } catch (e) {
+    console.error('Comment submission error:', e);
+    alert('Error: ' + (e.message || 'Failed to save comment'));
   }
 }
 

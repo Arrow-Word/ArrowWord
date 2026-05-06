@@ -75,6 +75,12 @@ tr:hover td{background:#faf8ff}
     <thead><tr><th>Puzzle</th><th>Avg rating</th><th>Total ratings</th></tr></thead>
     <tbody id="ratings-body"><tr><td colspan="3" class="loading">Loading…</td></tr></tbody>
   </table>
+
+  <h2>💬 User feedback & bug reports</h2>
+  <table id="comments-table">
+    <thead><tr><th>Puzzle</th><th>User</th><th>Type</th><th>Comment</th><th>Date</th></tr></thead>
+    <tbody id="comments-body"><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
+  </table>
   <hr style="border:none;border-top:2px solid #f4a8a8;margin:40px 0 24px">
   <div class="clear-section">
     <h3>🗑 Danger zone — clear all published puzzles</h3>
@@ -111,11 +117,12 @@ async function loadStats(){
   while(typeof sbAdminGetAllProgress==='undefined'&&attempts++<30) await new Promise(r=>setTimeout(r,200));
 
   try {
-    const [progress, users, puzzles, ratings] = await Promise.all([
+    const [progress, users, puzzles, ratings, comments] = await Promise.all([
       sbAdminGetAllProgress(),
       sbAdminGetAllUsers(),
       cloudGetIndex(),
-    sbAdminGetRatings().catch(()=>[])
+      sbAdminGetRatings().catch(()=>[]),
+      sbAdminGetAllComments().catch(()=>[])
     ]);
 
     const totalComplete = progress.filter(p=>p.complete).length;
@@ -179,6 +186,29 @@ async function loadStats(){
       <td style="color:#f0a500">${'★'.repeat(Math.round(r.avg_rating))}${'☆'.repeat(5-Math.round(r.avg_rating))} ${parseFloat(r.avg_rating).toFixed(1)}</td>
       <td>${r.total_ratings}</td>
     </tr>`).join('');
+
+    // Comments table
+    const cBody = document.getElementById('comments-body');
+    if (!comments.length) { 
+      cBody.innerHTML = '<tr><td colspan="5" style="color:#aaa;font-style:italic">No feedback yet.</td></tr>'; 
+    } else {
+      const sorted = [...comments].sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+      const userMap = {};
+      users.forEach(u => { userMap[u.id] = u; });
+      cBody.innerHTML = sorted.map(c => {
+        const u = userMap[c.user_id];
+        const userName = u ? (u.display_name || u.email || 'Unknown') : 'Unknown';
+        const typeLabel = c.comment_type === 'bug_report' ? '🐛 Bug' : '💬 Feedback';
+        const commentText = c.comment_text.substring(0, 100) + (c.comment_text.length > 100 ? '…' : '');
+        return `<tr>
+          <td>${puzzleMap[c.puzzle_id]||c.puzzle_id}</td>
+          <td>${userName}</td>
+          <td>${typeLabel}</td>
+          <td title="${c.comment_text}">${commentText}</td>
+          <td>${new Date(c.created_at).toLocaleDateString('en-ZA')}</td>
+        </tr>`;
+      }).join('');
+    }
   } catch(e) {
     document.getElementById('stats-row').innerHTML=`<div style="color:#c00;padding:12px">Error loading stats: ${e.message}</div>`;
   }
