@@ -1,4 +1,4 @@
-// supabase-auth.js — v20
+// supabase-auth.js — v21
 // ══════════════════════════════════════════════════════════════════════════════
 // Handles all Supabase auth (Google, Facebook) and user progress storage.
 // Loaded by directory.html and admin.html.
@@ -212,5 +212,48 @@ async function sbAdminGetAllComments() {
     .select('*')
     .order('created_at', { ascending: false });
   if (error) { console.error('Admin comments query error:', error); return []; }
+  return data || [];
+}
+
+// ── Role API ──────────────────────────────────────────────────────────────────
+async function sbGetUserRole() {
+  if (!_sb || !_user) return 'user';
+  const { data, error } = await _sb.from('user_roles')
+    .select('role')
+    .eq('user_id', _user.id)
+    .single();
+  if (error || !data) return 'user'; // default to user if no role set
+  return data.role;
+}
+
+async function sbGetBuilder(userId) {
+  if (!_sb) return null;
+  const { data, error } = await _sb.from('user_profiles')
+    .select('id, display_name, email')
+    .eq('id', userId)
+    .single();
+  if (error || !data) return null;
+  return data;
+}
+
+async function sbAdminSetRole(userId, role) {
+  if (!_sb || !_user) return false;
+  // Check if current user is admin
+  const userRole = await sbGetUserRole();
+  if (userRole !== 'admin') return false;
+  
+  const { error } = await _sb.from('user_roles').upsert({
+    user_id: userId,
+    role: role
+  }, { onConflict: 'user_id' });
+  
+  if (error) { console.error('Set role error:', error); return false; }
+  return true;
+}
+
+async function sbAdminGetAllRoles() {
+  if (!_sb) return [];
+  const { data, error } = await _sb.from('user_roles').select('*');
+  if (error) { console.error('Get roles error:', error); return []; }
   return data || [];
 }
