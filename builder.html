@@ -185,13 +185,10 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
 <script src="cloud-storage.js?v=20260507"></script>
 <script src="supabase-auth.js?v=20260507"></script>
 <script>
-// Role-based access check for builder
-async function checkBuilderAccess() {
-  let attempts = 0;
-  while (typeof sbGetUserRole === 'undefined' && attempts++ < 50) {
-    await new Promise(r => setTimeout(r, 200));
-  }
-  
+const SUPABASE_URL = 'https://bfpoiewwvtdczkmoqlye.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmcG9pZXd3dnRkY3prbW9xbHllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODAxMTUsImV4cCI6MjA5MzQ1NjExNX0.EoIz2o7xg69tfAnSOp5wVusjc71s0cOmsEoSDwaxjso';
+
+async function checkBuilderAccessDirect() {
   const user = sbGetUser();
   if (!user) {
     document.getElementById('builder-lock-msg').innerHTML = 'Please <a href="directory.html" style="color:#7744bb">sign in</a> to access the builder.';
@@ -199,7 +196,14 @@ async function checkBuilderAccess() {
   }
   
   try {
-    const role = await sbGetUserRole();
+    // Direct API call to check role
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/user_roles?user_id=eq.' + encodeURIComponent(user.id) + '&select=role',
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
+    );
+    const data = await res.json();
+    const role = (data && data.length > 0) ? data[0].role : 'user';
+    
     if (role === 'builder' || role === 'admin') {
       document.getElementById('builder-lock').style.display = 'none';
     } else {
@@ -211,10 +215,18 @@ async function checkBuilderAccess() {
   }
 }
 
-if (typeof sbOnUserChanged !== 'undefined') {
-  sbOnUserChanged(() => checkBuilderAccess());
-}
-setTimeout(() => checkBuilderAccess(), 500);
+// Wait for auth to load, then check
+let attempts = 0;
+const checkInterval = setInterval(async () => {
+  if (typeof sbGetUser !== 'undefined') {
+    clearInterval(checkInterval);
+    await checkBuilderAccessDirect();
+    if (typeof sbOnUserChanged !== 'undefined') {
+      sbOnUserChanged(() => checkBuilderAccessDirect());
+    }
+  }
+  if (attempts++ > 50) clearInterval(checkInterval);
+}, 200);
 </script>
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
