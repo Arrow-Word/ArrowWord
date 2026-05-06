@@ -857,8 +857,6 @@ async function _silentSave(answers) {
 }
 
 // ── Completion + Rating (merged, no skip) ────────────────────────────────────
-let _selectedRating = 0;
-
 function setStar(v) {
   _selectedRating = v;
   document.querySelectorAll('.star').forEach(s => {
