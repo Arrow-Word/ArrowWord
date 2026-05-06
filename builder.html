@@ -220,12 +220,14 @@ let attempts = 0;
 const checkInterval = setInterval(async () => {
   if (typeof sbGetUser !== 'undefined') {
     clearInterval(checkInterval);
+    // Wait a bit more for auth to fully initialize
+    await new Promise(r => setTimeout(r, 1000));
     await checkBuilderAccessDirect();
     if (typeof sbOnUserChanged !== 'undefined') {
       sbOnUserChanged(() => checkBuilderAccessDirect());
     }
   }
-  if (attempts++ > 50) clearInterval(checkInterval);
+  if (attempts++ > 100) clearInterval(checkInterval);
 }, 200);
 </script>
 <div style="position:relative">
