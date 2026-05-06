@@ -12,9 +12,14 @@
 <!--
   Arrow Word Puzzles
   ══════════════════════════════════════════════════════
-  CURRENT VERSION: v18
+  CURRENT VERSION: v20
   ══════════════════════════════════════════════════════
   CHANGELOG:
+  v20 - Merged celebration and ratings into single modal (no skip).
+        Added comments field to completion modal (optional).
+        Added "Report Bug / Comment" button in solver header.
+        New puzzle_comments table in Supabase for feedback tracking.
+  v19 - Supabase puzzle storage (no tokens), published puzzles in builder, sort, favicon, sign-in required, sanity cleanup
   v18 - Complete auth rewrite using Supabase.
         Real Google OAuth (genuine Google login page).
         Facebook login support added.
@@ -129,6 +134,7 @@ main{max-width:1000px;margin:0 auto;padding:24px}
 .solve-toolbar button.green{background:#d4f0d4;color:#1a6e1a;border-color:#7bc07b}
 .solve-toolbar button.blue{background:#d0e8ff;color:#004a99;border-color:#6aaae0;font-weight:600}
 .solve-toolbar button.warn{background:#ffe0e0;color:#900;border-color:#f4a8a8}
+.solve-toolbar button.orange{background:#ffe8cc;color:#8b4513;border-color:#ffb366}
 .zoom-bar{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .zoom-bar span{font-size:12px;color:#666}
 .zoom-bar button{padding:5px 10px;font-size:12px;cursor:pointer;border:1px solid #bbb;border-radius:4px;background:#fff;min-width:34px}
@@ -147,569 +153,644 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 .clue-slot.ap-right{flex-direction:row;align-items:center;justify-content:center}
 .clue-slot.ap-left{flex-direction:row;align-items:center;justify-content:center}
 .clue-slot.ap-left .slot-arrow{order:-1}
-.clue-slot.ap-bottom{flex-direction:column;align-items:center;justify-content:center}
-.clue-slot.ap-top{flex-direction:column;align-items:center;justify-content:center}
-.clue-slot.ap-top .slot-arrow{order:-1}
-.slot-text{font-weight:600;color:#443366;overflow:hidden;flex:0 1 auto;line-height:1.15;text-align:center;word-break:normal;hyphens:none}
-.clue-slot.ap-right .slot-text,.clue-slot.ap-left .slot-text{flex:1 1 auto}
-.slot-arrow{flex-shrink:0;display:block;line-height:0}
-.slot-arrow svg{display:block}
-.clue-divider{height:1px;background:#9966cc;opacity:0.6;flex-shrink:0;margin:0 2px}
-.solve-input{width:100%;height:100%;border:none;background:transparent;text-align:center;font-weight:600;color:#222;outline:none;text-transform:uppercase;display:block;cursor:text}
-.solve-input:focus{background:#fffde0}
-.solve-input.wrong{background:#ffd0d8!important;color:#a01030}
-.solve-input.in-active-word{background:#fff5b8}
-.solve-input.active-cell,.solve-input:focus.active-cell{background:#ffe680}
-#celebrate{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;align-items:center;justify-content:center;padding:16px}
-#celebrate .cel-box{background:#fff;border-radius:10px;padding:24px;width:340px;max-width:95vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
-@media print{
-  nav,.page-header,main,.solve-toolbar,.zoom-bar,.solver-header{display:none!important}
-  td.t-answer{background:#fff!important}
-  td.t-clue{background:#e8e0f0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  td.t-black{background:#333!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .solve-input{display:none}
-}
+.clue-slot.ap-down{flex-direction:column;align-items:center;justify-content:center}
+.clue-slot.ap-up{flex-direction:column-reverse;align-items:center;justify-content:center}
+.clue-slot.ap-ur{flex-direction:column-reverse;align-items:flex-start;justify-content:flex-end;padding:1px}
+.clue-slot.ap-ul{flex-direction:column-reverse;align-items:flex-end;justify-content:flex-end;padding:1px}
+.clue-slot.ap-dr{flex-direction:column;align-items:flex-start;justify-content:flex-start;padding:1px}
+.clue-slot.ap-dl{flex-direction:column;align-items:flex-end;justify-content:flex-start;padding:1px}
+.slot-arrow{font-size:7px;color:#666;pointer-events:none;flex-shrink:0}
+.slot-clue{font-size:10px;font-weight:700;color:#222;line-height:1;pointer-events:none;flex-shrink:0;word-break:break-word;padding:0 1px}
+.solve-input{border:none;background:transparent;font-size:22px;font-weight:700;text-align:center;width:100%;height:100%;text-transform:uppercase;caret-color:#7744bb;color:#222}
+.solve-input.wrong{color:red}
+input.solve-input:focus{outline:none;background:rgba(119,68,187,0.1)}
+.clue-list{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.clue-list-group{display:flex;flex-direction:column;gap:4px}
+.clue-list-group p{font-size:12px;font-weight:700;color:#666}
+.clue-item{font-size:12px;padding:4px 8px;background:#f0ecff;border-radius:4px;color:#333;cursor:pointer;transition:background .1s}
+.clue-item:hover{background:#e0d8f0}
+.clue-item.active{background:#7744bb;color:#fff}
 
-.solver-timer{font-size:13px;color:#e8d8ff;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:12px;font-variant-numeric:tabular-nums;min-width:60px;text-align:center}
-.rating-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:400;align-items:center;justify-content:center;padding:16px}
+/* Rating & Completion modal */
+.rating-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:300;align-items:center;justify-content:center;padding:16px}
 .rating-modal.open{display:flex}
-.rating-box{background:#fff;border-radius:14px;padding:28px;max-width:380px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
-.rating-box h2{font-size:18px;font-weight:700;color:#443366;margin-bottom:8px}
-.rating-box p{font-size:13px;color:#666;margin-bottom:20px}
-.stars{display:flex;justify-content:center;gap:8px;margin-bottom:20px}
-.star{font-size:40px;cursor:pointer;opacity:0.3;transition:opacity .15s,transform .1s}
-.star.active{opacity:1}
-.star:hover{transform:scale(1.15)}
-.btn-rate{background:#7744bb;color:#fff;border:none;border-radius:7px;padding:11px 28px;font-size:14px;font-weight:600;cursor:pointer;margin-right:8px}
-.btn-skip{background:#fff;color:#888;border:1px solid #ddd;border-radius:7px;padding:10px 20px;font-size:13px;cursor:pointer}
-.puzzle-rating{font-size:11px;color:#f0a500;margin-top:2px}
+.rating-box{background:#fff;border-radius:14px;padding:32px 28px;max-width:480px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+.rating-box h2{font-size:22px;font-weight:700;color:#443366;margin-bottom:8px}
+.rating-box p{font-size:13px;color:#666;line-height:1.6;margin-bottom:16px}
+.stars{display:flex;justify-content:center;gap:8px;margin-bottom:24px}
+.star{font-size:36px;cursor:pointer;opacity:0.3;transition:opacity .1s}
+.star:hover,.star.active{opacity:1}
+.comment-section{margin:24px 0;text-align:left}
+.comment-section label{display:block;font-size:13px;font-weight:600;color:#443366;margin-bottom:8px}
+.comment-section textarea{width:100%;min-height:80px;padding:10px;font-size:12px;border:1px solid #ccc;border-radius:6px;font-family:Arial,sans-serif;resize:vertical}
+.comment-section textarea:focus{outline:none;border-color:#7744bb;box-shadow:0 0 0 2px rgba(119,68,187,0.1)}
+.comment-hint{font-size:11px;color:#999;margin-top:4px}
+.rating-buttons{display:flex;gap:10px;justify-content:center}
+.btn-rate{flex:1;background:#7744bb;color:#fff;border:none;border-radius:6px;padding:12px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-rate:hover{background:#6633aa}
+.btn-skip{flex:1;background:#f0ecff;color:#7744bb;border:1px solid #e0d8f0;border-radius:6px;padding:12px;font-size:14px;cursor:pointer}
+.btn-skip:hover{background:#e8e0f0}
+.celebration{display:none;font-size:48px;margin-bottom:16px}
+
+/* Comment/bug report modal */
+.comment-report-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:300;align-items:center;justify-content:center;padding:16px}
+.comment-report-modal.open{display:flex}
+.comment-report-box{background:#fff;border-radius:14px;padding:28px;max-width:480px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+.comment-report-box h2{font-size:20px;font-weight:700;color:#443366;margin-bottom:16px}
+.comment-report-box textarea{width:100%;min-height:100px;padding:10px;font-size:12px;border:1px solid #ccc;border-radius:6px;font-family:Arial,sans-serif;resize:vertical}
+.comment-report-box textarea:focus{outline:none;border-color:#7744bb;box-shadow:0 0 0 2px rgba(119,68,187,0.1)}
+.comment-type-select{margin:16px 0}
+.comment-type-select label{display:inline-block;margin-right:20px}
+.comment-type-select input{margin-right:6px}
+.comment-buttons{display:flex;gap:10px;justify-content:center;margin-top:20px}
+.comment-buttons button{flex:1;padding:12px;font-size:14px;border:none;border-radius:6px;cursor:pointer;font-weight:600}
+.btn-submit-comment{background:#7744bb;color:#fff}
+.btn-submit-comment:hover{background:#6633aa}
+.btn-cancel-comment{background:#f0ecff;color:#7744bb;border:1px solid #e0d8f0}
+.btn-cancel-comment:hover{background:#e8e0f0}
 </style>
 </head>
 <body>
+<script src="cloud-storage.js"></script>
+<script src="supabase-auth.js"></script>
+
 <nav>
-  <a class="nav-brand" href="index.html">Arrow<span>Word</span></a>
+  <a href="index.html" class="nav-brand">Arrow<span>Word</span></a>
   <div class="nav-links">
     <a href="index.html">Home</a>
-    <a href="directory.html" class="active">Puzzles</a>
-    <!-- User pill — shown when signed in -->
-    <div class="nav-user" id="nav-user">
-      <img id="nav-avatar" src="" alt="">
-      <span id="nav-name"></span>
-      <button onclick="sbSignOut()">Sign out</button>
-    </div>
+    <a href="directory.html" class="active">Solve</a>
+    <a href="builder.html">Build</a>
+    <a href="about-builder.html">About</a>
+  </div>
+  <div class="nav-user" id="nav-user">
+    <img id="user-avatar" src="" alt="Avatar">
+    <span id="user-name">User</span>
+    <button onclick="sbSignOut()" style="cursor:pointer">Sign out</button>
   </div>
 </nav>
 
 <div class="page-header">
   <div>
-    <h1><img src="favicon.png" style="width:28px;height:28px;border-radius:6px;vertical-align:middle;margin-right:6px;object-fit:cover"> Puzzle Directory</h1>
-    <p>Click any puzzle to solve it online</p>
+    <h1>Solve Puzzles</h1>
+    <p>Pick a puzzle to solve. Your progress is saved automatically.</p>
   </div>
-  <a href="builder.html" style="background:#7744bb;color:#fff;text-decoration:none;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:600">+ Create puzzle</a>
 </div>
 
 <main>
   <div class="dir-toolbar">
-    <input type="text" id="search" placeholder="Search puzzles…" oninput="renderDir()">
-    <select id="sort-by" onchange="renderDir()">
-      <option value="alpha" selected>A–Z</option>
+    <input type="text" id="search-box" placeholder="Search puzzles..." onkeyup="filterPuzzles()">
+    <select id="sort-select" onchange="sortPuzzles()">
+      <option value="a-z">A-Z</option>
       <option value="newest">Newest first</option>
       <option value="oldest">Oldest first</option>
     </select>
-    <button class="refresh-btn" onclick="loadDir()">↻ Refresh</button>
+    <button class="refresh-btn" onclick="loadDir()">Refresh</button>
   </div>
-  <div class="size-tabs" id="size-tabs"></div>
-  <div class="count-line" id="count-line"></div>
-  <div id="dir-content"><div class="loading">Loading puzzles…</div></div>
+  
+  <div id="size-tabs" class="size-tabs"></div>
+  <div id="puzzle-list" class="puzzle-grid">
+    <div class="loading">Loading puzzles...</div>
+  </div>
 </main>
 
-<!-- Sign-in modal -->
+<!-- Sign-in Modal -->
 <div id="signin-modal">
   <div class="signin-box">
-    <img src="favicon.png" style="width:80px;height:80px;border-radius:16px;margin-bottom:12px;object-fit:cover">
-    <h2>Sign in to track your progress</h2>
-    <p>Sign in to save your progress and pick up where you left off — on any device, any browser. Your puzzle history is saved to your account.</p>
-    <button class="btn-google" onclick="doSignIn('google')">
-      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-      Continue with Google
+    <div style="font-size:48px;margin-bottom:12px">🎯</div>
+    <h2>Sign In</h2>
+    <p>Sign in with your Google account to solve puzzles and track your progress.</p>
+    <button class="btn-google" onclick="sbSignInGoogle()">
+      <span style="font-size:18px">📎</span> Sign in with Google
     </button>
-
-<p class="signin-note">Sign in with your Google account to track your progress across devices. We only store your puzzle progress — nothing else.</p>
+    <p class="signin-note">Your progress will be saved to the cloud and accessible from any device.</p>
   </div>
 </div>
 
-<!-- Solver overlay -->
-<div id="solver-overlay" onclick="solverBgClick(event)">
-  <div class="solver-box" id="solver-box">
+<!-- Solver Overlay -->
+<div id="solver-overlay">
+  <div class="solver-box">
     <div class="solver-header">
       <h2 id="solver-title">Puzzle</h2>
-      <span class="solver-timer" id="solver-timer">0:00</span><button class="solver-close" onclick="closeSolver()">✕ Close</button>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:13px;color:#e8d8ff">Time: <span id="solver-timer">0:00</span></span>
+        <button class="solver-close" onclick="closeSolver()">Close</button>
+      </div>
     </div>
     <div class="solver-body">
       <div class="solve-toolbar">
         <div class="solve-toolbar-left">
-          <button class="blue" onclick="saveProgress()">💾 Save progress</button>
-          <button onclick="solverCheck()">✓ Check answers</button>
+          <button onclick="solverSave()" class="blue">Save Progress</button>
+          <button onclick="solverCheck()" class="green">Check Answers</button>
+          <button onclick="openCommentModal()" class="orange">💬 Comment / Report</button>
         </div>
         <div class="solve-toolbar-right">
-          <button class="green" onclick="window.print()">🖨 Print</button>
-          <button class="warn" onclick="solverClear()">Clear</button>
+          <button onclick="printPuzzle()">🖨️ Print</button>
+          <button onclick="solverClear()" class="warn">Clear</button>
         </div>
       </div>
       <div class="zoom-bar">
-        <span>Zoom:</span>
-        <button onclick="sZoomBy(-0.15)">−</button>
-        <button onclick="sSetZoom(1)">100%</button>
-        <button onclick="sZoomBy(0.15)">+</button>
-        <button onclick="sZoomFit()">Fit</button>
+        <button onclick="sZoomBy(-0.1)">−</button>
         <span id="s-zoom-val">100%</span>
+        <button onclick="sZoomBy(0.1)">+</button>
+        <button onclick="sZoomFit()">Fit</button>
       </div>
-      <div class="grid-wrap" id="s-grid-wrap" onclick="gridWrapClick(event)">
-        <div id="s-zoom-wrap" style="transform-origin:top left;display:inline-block">
-          <table class="puzzle" id="s-grid"></table>
+      <div id="s-grid-wrap" class="grid-wrap">
+        <div id="s-zoom-wrap">
+          <table id="s-grid" class="puzzle"></table>
         </div>
       </div>
+      <div id="s-clue-list" class="clue-list"></div>
     </div>
   </div>
 </div>
 
-<div id="celebrate">
-  <div class="cel-box">
-    <div style="font-size:48px;margin-bottom:8px">🎉</div>
-    <h2 style="color:#1a6e1a;margin-bottom:8px">Puzzle complete!</h2>
-    <p style="font-size:14px;color:#444;margin-bottom:16px">Every letter is correct. Well done!</p>
-    <button onclick="document.getElementById('celebrate').style.display='none'" style="background:#7744bb;color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer">Close</button>
+<!-- Completion + Rating Modal (merged, no skip) -->
+<div class="rating-modal" id="rating-modal">
+  <div class="rating-box">
+    <div class="celebration" id="celebration">🎉</div>
+    <h2 id="completion-title">Puzzle Complete!</h2>
+    <p id="completion-msg">Congratulations! You've solved the puzzle. Please rate your experience.</p>
+    
+    <div style="margin:24px 0">
+      <p style="font-size:13px;color:#666;margin-bottom:12px">How did you find this puzzle?</p>
+      <div class="stars" id="stars">
+        <span class="star" data-v="1" onclick="setStar(1)">★</span>
+        <span class="star" data-v="2" onclick="setStar(2)">★</span>
+        <span class="star" data-v="3" onclick="setStar(3)">★</span>
+        <span class="star" data-v="4" onclick="setStar(4)">★</span>
+        <span class="star" data-v="5" onclick="setStar(5)">★</span>
+      </div>
+    </div>
+
+    <div class="comment-section">
+      <label for="completion-comment">Optional feedback or comments:</label>
+      <textarea id="completion-comment" placeholder="Any feedback? We'd love to hear from you..."></textarea>
+      <p class="comment-hint">Your feedback helps us improve future puzzles.</p>
+    </div>
+
+    <div class="rating-buttons">
+      <button class="btn-rate" onclick="submitCompletionRating()">Submit</button>
+    </div>
   </div>
 </div>
 
-<script src="cloud-storage.js"></script>
-<script src="supabase-auth.js"></script>
+<!-- Comment/Bug Report Modal -->
+<div class="comment-report-modal" id="comment-report-modal">
+  <div class="comment-report-box">
+    <h2>Send Feedback</h2>
+    
+    <div class="comment-type-select">
+      <label><input type="radio" name="comment-type" value="feedback" checked> General feedback</label>
+      <label><input type="radio" name="comment-type" value="bug_report"> Report a bug</label>
+    </div>
+
+    <textarea id="comment-text" placeholder="Tell us what you think..."></textarea>
+
+    <div class="comment-buttons">
+      <button class="btn-submit-comment" onclick="submitCommentReport()">Send</button>
+      <button class="btn-cancel-comment" onclick="closeCommentModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
-function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-// ── Arrow SVG ─────────────────────────────────────────────────────────────────
-function arrowSVG(dir,s){
-  const c=s/2,m=Math.ceil(s*0.12),e=s-m,sw=Math.max(1.6,s/12),ah=s*0.34;
-  function head(x,y,dx,dy){const l=Math.sqrt(dx*dx+dy*dy),nx=dx/l,ny=dy/l,px=-ny,py=nx;return`M${x-nx*ah+px*ah*0.45},${y-ny*ah+py*ah*0.45} L${x},${y} L${x-nx*ah-px*ah*0.45},${y-ny*ah-py*ah*0.45}`;}
-  const paths={right:[`M${m},${c} L${e},${c}`,head(e,c,1,0)],left:[`M${e},${c} L${m},${c}`,head(m,c,-1,0)],down:[`M${c},${m} L${c},${e}`,head(c,e,0,1)],up:[`M${c},${e} L${c},${m}`,head(c,m,0,-1)],'right-down':[`M${m},${c} L${c},${c} L${c},${e}`,head(c,e,0,1)],'down-right':[`M${c},${m} L${c},${c} L${e},${c}`,head(e,c,1,0)],'left-down':[`M${e},${c} L${c},${c} L${c},${e}`,head(c,e,0,1)],'down-left':[`M${c},${m} L${c},${c} L${m},${c}`,head(m,c,-1,0)],'right-up':[`M${m},${c} L${c},${c} L${c},${m}`,head(c,m,0,-1)],'up-right':[`M${c},${e} L${c},${c} L${e},${c}`,head(e,c,1,0)],'left-up':[`M${e},${c} L${c},${c} L${c},${m}`,head(c,m,0,-1)],'up-left':[`M${c},${e} L${c},${c} L${m},${c}`,head(m,c,-1,0)]};
-  const[p,a]=paths[dir]||paths.right;
-  return`<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg"><path d="${p}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${a}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-}
-const EAPOS={right:'right',left:'left',down:'bottom',up:'top','right-down':'right','down-right':'bottom','left-down':'left','down-left':'bottom','right-up':'right','up-right':'top','left-up':'left','up-left':'top'};
-function eAPC(dir,isMulti){let p=EAPOS[dir]||'right';if(isMulti&&(p==='top'||p==='bottom'))p='right';if(p==='left')return'ap-left';if(p==='bottom')return'ap-bottom';if(p==='top')return'ap-top';return'ap-right';}
-function getWordCells(dir,ans,or,oc){
-  const len=ans.length,cells=[];
-  if(dir==='right'){for(let i=0;i<len;i++)cells.push([or,oc+1+i]);}
-  else if(dir==='left'){for(let i=0;i<len;i++)cells.push([or,oc-len+i]);}
-  else if(dir==='down'){for(let i=0;i<len;i++)cells.push([or+1+i,oc]);}
-  else if(dir==='up'){for(let i=0;i<len;i++)cells.push([or-len+i,oc]);}
-  else if(dir==='right-down'){cells.push([or,oc+1]);for(let i=1;i<len;i++)cells.push([or+i,oc+1]);}
-  else if(dir==='down-right'){cells.push([or+1,oc]);for(let i=1;i<len;i++)cells.push([or+1,oc+i]);}
-  else if(dir==='left-down'){cells.push([or,oc-1]);for(let i=1;i<len;i++)cells.push([or+i,oc-1]);}
-  else if(dir==='down-left'){const t=[[or+1,oc]];for(let i=1;i<len;i++)t.push([or+1,oc-i]);t.sort((a,b)=>a[1]-b[1]);cells.push(...t);}
-  else if(dir==='right-up'){const t=[[or,oc+1]];for(let i=1;i<len;i++)t.push([or-i,oc+1]);t.sort((a,b)=>a[0]-b[0]);cells.push(...t);}
-  else if(dir==='up-right'){const t=[[or-1,oc]];for(let i=1;i<len;i++)t.push([or-1,oc+i]);cells.push(...t);}
-  else if(dir==='left-up'){const t=[[or,oc-1]];for(let i=1;i<len;i++)t.push([or-i,oc-1]);t.sort((a,b)=>a[0]-b[0]);cells.push(...t);}
-  else if(dir==='up-left'){const t=[[or-1,oc]];for(let i=1;i<len;i++)t.push([or-1,oc-i]);t.sort((a,b)=>a[1]-b[1]);cells.push(...t);}
-  return cells;
-}
-
-// ── Auth state ────────────────────────────────────────────────────────────────
+// ── Puzzle data ───────────────────────────────────────────────────────────────
+let sPuzzles = [];
+let sCurPuzzle = null;
+let sCurPuzzleId = null;
+let sWords = [];
+let sActive = null;
+let sHighlighted = [];
+let sCurZoom = 1;
 let _cloudProgress = {};
-let _pendingSolverId = null;
 let _checkCounts = {};
+let _selectedRating = 0;
 
-sbOnUserChanged(async user => {
-  const navUser = document.getElementById('nav-user');
-  const navName = document.getElementById('nav-name');
-  const navAvatar = document.getElementById('nav-avatar');
-  if (user) {
-    navUser.style.display = 'flex';
-    navName.textContent = user.user_metadata?.full_name || user.email || '';
-    navAvatar.src = user.user_metadata?.avatar_url || '';
-    // Load cloud progress
-    try {
-      _cloudProgress = await sbLoadAllProgress();
-    _puzzleRatings = await sbGetRatings().catch(()=>({}));
-      renderDir();
-    } catch(e) { console.warn('Progress load failed:', e); }
-  } else {
-    navUser.style.display = 'none';
-    _cloudProgress = {};
-    renderDir();
-  }
-});
-
-// ── Sign-in flow ──────────────────────────────────────────────────────────────
-async function doSignIn(provider) {
-  document.getElementById('signin-modal').classList.remove('open');
-  if (provider === 'google') await sbSignInGoogle();
-  else if (provider === 'facebook') await sbSignInFacebook();
-}
-
-function continueAsGuest() {
-  sessionStorage.setItem('guest_mode', '1');
-  document.getElementById('signin-modal').classList.remove('open');
-  if (_pendingSolverId) { openSolver(_pendingSolverId); _pendingSolverId = null; }
-}
-
-function solveClicked(id) {
-  const user = sbGetUser();
-  if (user) {
-    openSolver(id);
-  } else {
-    _pendingSolverId = id;
-    document.getElementById('signin-modal').classList.add('open');
-  }
-}
-
-// After sign-in redirect, if there was a pending puzzle open it
+// ── Auth ───────────────────────────────────────────────────────────────────────
 sbOnUserChanged(user => {
-  if (user && _pendingSolverId) {
-    openSolver(_pendingSolverId);
-    _pendingSolverId = null;
-    document.getElementById('signin-modal').classList.remove('open');
+  const userEl = document.getElementById('nav-user');
+  if (user) {
+    userEl.style.display = 'flex';
+    document.getElementById('user-name').textContent = (user.user_metadata?.name || user.email || 'User').substring(0, 15);
+    if (user.user_metadata?.avatar_url) {
+      document.getElementById('user-avatar').src = user.user_metadata.avatar_url;
+    }
+    loadDir(); // reload directory when signed in
+  } else {
+    userEl.style.display = 'none';
   }
 });
 
-// ── Progress helpers ──────────────────────────────────────────────────────────
-function getPuzzleStatus(id) {
-  // Cloud is authoritative
-  if (_cloudProgress[id] && _cloudProgress[id].complete) return 'complete';
-  if (_cloudProgress[id]) return 'inprogress';
-  // Fall back to localStorage
-  const complete = JSON.parse(localStorage.getItem('arrowword_complete') || '{}');
-  if (complete[id]) return 'complete';
-  const progress = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
-  if (progress[id]) return 'inprogress';
-  return 'new';
-}
-
-// ── Directory ─────────────────────────────────────────────────────────────────
-let allPuzzles = [], activeSize = 'all';
-
+// ── Directory ──────────────────────────────────────────────────────────────────
 async function loadDir() {
-  document.getElementById('dir-content').innerHTML = '<div class="loading">Loading puzzles…</div>';
-  document.getElementById('size-tabs').innerHTML = '';
+  document.getElementById('puzzle-list').innerHTML = '<div class="loading">Loading puzzles...</div>';
   try {
-    allPuzzles = await cloudGetIndex();
-    buildSizeTabs();
+    sPuzzles = await cloudGetIndex();
+    _cloudProgress = sbGetUser() ? await sbLoadAllProgress() : {};
     renderDir();
-  } catch(e) {
-    document.getElementById('dir-content').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load puzzles.<br><small style="color:#bbb">${escHtml(e.message)}</small></p><button onclick="loadDir()" style="background:#7744bb;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;margin-top:12px">Try again</button></div>`;
+  } catch (e) {
+    console.error('Load error:', e);
+    document.getElementById('puzzle-list').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Failed to load puzzles.</p></div>';
   }
-}
-
-function getSizeLabel(p) { return (p.cols && p.rows) ? p.cols + '×' + p.rows : '?×?'; }
-
-function buildSizeTabs() {
-  const counts = {};
-  allPuzzles.forEach(p => { const s = getSizeLabel(p); counts[s] = (counts[s] || 0) + 1; });
-  const sizes = Object.keys(counts).sort((a, b) => {
-    const [ac,ar] = a.split('×').map(Number);
-    const [bc,br] = b.split('×').map(Number);
-    return (ac * ar) - (bc * br);
-  });
-  const tabs = document.getElementById('size-tabs');
-  if (sizes.length <= 1) { tabs.style.display = 'none'; return; }
-  tabs.style.display = 'flex';
-  const allBtn = document.createElement('button');
-  allBtn.className = 'size-tab active'; allBtn.textContent = 'All (' + allPuzzles.length + ')';
-  allBtn.onclick = () => setSize('all'); tabs.appendChild(allBtn);
-  sizes.forEach(s => {
-    const btn = document.createElement('button'); btn.className = 'size-tab';
-    btn.textContent = s + ' (' + counts[s] + ')'; btn.dataset.size = s;
-    btn.onclick = () => setSize(s); tabs.appendChild(btn);
-  });
-}
-
-function setSize(s) {
-  activeSize = s;
-  document.querySelectorAll('.size-tab').forEach(t => t.classList.toggle('active', t.dataset.size === s || (s === 'all' && !t.dataset.size)));
-  renderDir();
 }
 
 function renderDir() {
-  const q = (document.getElementById('search').value || '').toLowerCase();
-  const sort = document.getElementById('sort-by').value;
-  let list = allPuzzles.filter(p => {
-    if (!p || !p.id) return false;
-    const matchQ = !q || (p.title || '').toLowerCase().includes(q);
-    const matchSize = activeSize === 'all' || getSizeLabel(p) === activeSize;
-    return matchQ && matchSize;
+  const search = (document.getElementById('search-box').value || '').toLowerCase();
+  const sort = document.getElementById('sort-select').value;
+  
+  let filtered = sPuzzles.filter(p => (p.title || '').toLowerCase().includes(search));
+  
+  if (sort === 'newest') filtered.sort((a, b) => (b.publishedAtMs || 0) - (a.publishedAtMs || 0));
+  else if (sort === 'oldest') filtered.sort((a, b) => (a.publishedAtMs || 0) - (b.publishedAtMs || 0));
+  else filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+  
+  // Group by size
+  const bySize = {};
+  filtered.forEach(p => {
+    const key = `${p.rows}×${p.cols}`;
+    if (!bySize[key]) bySize[key] = [];
+    bySize[key].push(p);
   });
-  if (sort === 'newest') list = [...list].sort((a, b) => (b.publishedAtMs || 0) - (a.publishedAtMs || 0));
-  else if (sort === 'oldest') list = [...list].sort((a, b) => (a.publishedAtMs || 0) - (b.publishedAtMs || 0));
-  else list = [...list].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-  document.getElementById('count-line').textContent = list.length + ' puzzle' + (list.length === 1 ? '' : 's');
-  const content = document.getElementById('dir-content');
-  if (!list.length) {
-    content.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>${q ? 'No puzzles match your search.' : 'No puzzles published yet.'}</p></div>`;
+  
+  // Size tabs
+  const sizes = Object.keys(bySize).sort();
+  const sizeTabsEl = document.getElementById('size-tabs');
+  sizeTabsEl.innerHTML = '';
+  if (sizes.length > 1) {
+    const allBtn = document.createElement('button');
+    allBtn.className = 'size-tab active';
+    allBtn.textContent = 'All';
+    allBtn.onclick = () => {
+      document.querySelectorAll('.size-tab').forEach(b => b.classList.remove('active'));
+      allBtn.classList.add('active');
+      document.querySelectorAll('.group-section').forEach(s => s.style.display = '');
+    };
+    sizeTabsEl.appendChild(allBtn);
+    
+    sizes.forEach(sz => {
+      const btn = document.createElement('button');
+      btn.className = 'size-tab';
+      btn.textContent = sz;
+      btn.onclick = () => {
+        document.querySelectorAll('.size-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.group-section').forEach(s => s.style.display = s.dataset.size === sz ? '' : 'none');
+      };
+      sizeTabsEl.appendChild(btn);
+    });
+  }
+  
+  // Render groups
+  let html = '';
+  sizes.forEach(sz => {
+    html += `<div class="group-section" data-size="${sz}">
+      <div class="group-title">${sz} <span class="group-count">${bySize[sz].length}</span></div>
+      <div class="puzzle-grid">`;
+    
+    bySize[sz].forEach(p => {
+      const progress = _cloudProgress[p.id];
+      let badge = '';
+      if (progress) {
+        badge = progress.complete ? '<span class="pcard-badge badge-complete">✓ Done</span>' : '<span class="pcard-badge badge-inprogress">⏳ In progress</span>';
+      }
+      
+      html += `<div class="pcard">
+        ${badge}
+        <div class="pcard-title">${p.title}</div>
+        <div class="pcard-meta">${p.publishedAt || 'Published'}</div>
+        <span class="pcard-size">${p.rows}×${p.cols}</span>
+        <button class="btn-solve" onclick="solveClicked('${p.id}')">Solve</button>
+      </div>`;
+    });
+    html += '</div></div>';
+  });
+  
+  document.getElementById('puzzle-list').innerHTML = html || '<div class="empty-state"><div class="empty-icon">🔍</div><p>No puzzles found.</p></div>';
+}
+
+function filterPuzzles() { renderDir(); }
+function sortPuzzles() { renderDir(); }
+
+// ── Solver ─────────────────────────────────────────────────────────────────────
+async function solveClicked(id) {
+  if (!sbGetUser()) {
+    document.getElementById('signin-modal').classList.add('open');
     return;
   }
-  const sizes = [...new Set(list.map(p => getSizeLabel(p)))];
-  if (activeSize === 'all' && sizes.length > 1 && !q && sort === 'alpha') {
-    content.innerHTML = sizes.sort().map(s => {
-      const group = list.filter(p => getSizeLabel(p) === s);
-      return `<div class="group-section"><div class="group-title">${s} grid <span class="group-count">${group.length} puzzle${group.length === 1 ? '' : 's'}</span></div><div class="puzzle-grid">${group.map(cardHtml).join('')}</div></div>`;
-    }).join('');
-  } else {
-    content.innerHTML = '<div class="puzzle-grid">' + list.map(cardHtml).join('') + '</div>';
-  }
-}
-
-function cardHtml(p) {
-  const title = p.title || '(Untitled)';
-  const status = getPuzzleStatus(p.id);
-  const badge = status === 'complete' ? '<span class="pcard-badge badge-complete">✓ Completed</span>'
-    : status === 'inprogress' ? '<span class="pcard-badge badge-inprogress">⏳ In progress</span>' : '';
-  const btnLabel = status === 'inprogress' ? '▶ Continue solving' : status === 'complete' ? '↺ Solve again' : 'Solve →';
-  return `<div class="pcard">${badge}
-    <div class="pcard-title">${escHtml(title)}</div>
-    <div class="pcard-meta">Published ${p.publishedAt || ''}</div>
-    ${_puzzleRatings[p.id] ? `<div class="puzzle-rating">${'★'.repeat(Math.round(_puzzleRatings[p.id].avg_rating))}${'☆'.repeat(5-Math.round(_puzzleRatings[p.id].avg_rating))} ${parseFloat(_puzzleRatings[p.id].avg_rating).toFixed(1)}</div>` : ''}
-    ${p.cols && p.rows ? `<div class="pcard-size">${p.cols}×${p.rows} grid</div>` : ''}
-    <button class="btn-solve" onclick="solveClicked('${p.id}')">${btnLabel}</button>
-  </div>`;
-}
-
-// ── Solver ────────────────────────────────────────────────────────────────────
-let sWords = [], sActive = null, sCurZoom = 1, sCurPuzzleId = null;
-
-function solverBgClick(e) { if (e.target === document.getElementById('solver-overlay')) closeSolver(); }
-function gridWrapClick(e) {
-  if (e.target.closest('td.t-empty') || e.target.closest('td.t-black') || e.target === document.getElementById('s-grid-wrap') || e.target === document.getElementById('s-zoom-wrap')) {
-    sActive = null; sHighlight();
-  }
-}
-
-async function openSolver(id) {
-  sCurPuzzleId = id;
-  _checkCounts[id] = _checkCounts[id] || 0;
-  resetTimer();
-  startAutoSave();
-  _lastSavedAnswers = '';
-  // Restore time from cloud
-  if (sbGetUser()) { sbLoadProgress(id).then(p => { if (p && p.time_spent_seconds) { _timerSeconds = p.time_spent_seconds; const m=Math.floor(_timerSeconds/60),s=_timerSeconds%60; const el=document.getElementById('solver-timer'); if(el) el.textContent=m+':'+String(s).padStart(2,'0'); } }); }
-  document.getElementById('solver-title').textContent = 'Loading…';
-  document.getElementById('solver-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  history.replaceState(null, '', '?id=' + id);
+  
   try {
-    const entry = await cloudGetPuzzle(id);
-    if (!entry || !entry.data) throw new Error('Puzzle data not found');
-    document.getElementById('solver-title').textContent = entry.title;
-    buildSolverGrid(entry.data);
-    setTimeout(() => { sZoomFit(); fitSolverText(); }, 80);
-    // Restore progress — cloud first, then localStorage
-    setTimeout(async () => {
-      let answers = null;
-      if (sbGetUser()) {
-        const prog = await sbLoadProgress(id);
-        if (prog && prog.answers) { answers = prog.answers; _checkCounts[id] = prog.check_count || 0; }
+    sCurPuzzle = await cloudGetPuzzle(id);
+    sCurPuzzleId = id;
+    
+    if (!sCurPuzzle) {
+      alert('Failed to load puzzle.');
+      return;
+    }
+    
+    // Parse grid and build solver
+    const data = sCurPuzzle.data;
+    document.getElementById('solver-title').textContent = sCurPuzzle.title;
+    
+    // Rebuild solver table
+    const tbl = document.getElementById('s-grid');
+    tbl.innerHTML = '';
+    
+    // Extract words and build table
+    sWords = [];
+    for (let r = 0; r < data.rows; r++) {
+      const tr = document.createElement('tr');
+      for (let c = 0; c < data.cols; c++) {
+        const cell = data.cells[r][c];
+        const td = document.createElement('td');
+        
+        if (cell.type === 'black') {
+          td.className = 't-black';
+        } else if (cell.type === 'clue') {
+          td.className = 't-clue';
+          const clues = cell.clues || [];
+          let html = '<div class="clue-inner">';
+          clues.forEach((clue, idx) => {
+            const ap = clue.arrow_pos || 'ap-right';
+            html += `<div class="clue-slot ${ap}" onclick="setActive(${r},${c},${idx})" data-r="${r}" data-c="${c}" data-idx="${idx}">
+              <span class="slot-arrow">${clue.arrow_symbol || '▶'}</span>
+              <span class="slot-clue" style="font-size:${clue.font_size || 10}px">${clue.text}</span>
+            </div>`;
+          });
+          html += '</div>';
+          td.innerHTML = html;
+        } else {
+          td.className = 't-answer';
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.maxLength = 1;
+          inp.className = 'solve-input';
+          inp.dataset.r = r;
+          inp.dataset.c = c;
+          inp.onkeydown = e => solverKeydown(e, r, c);
+          inp.onfocus = () => selectWord(r, c);
+          td.appendChild(inp);
+        }
+        tr.appendChild(td);
       }
-      if (!answers) {
-        const local = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
-        if (local[id]) answers = local[id].answers;
-      }
-      if (answers) {
-        Object.entries(answers).forEach(([key, val]) => {
-          const [r, c] = key.split(',').map(Number);
-          const inp = sGetInp(r, c);
-          if (inp) inp.value = val;
+      tbl.appendChild(tr);
+    }
+    
+    // Identify words
+    for (let r = 0; r < data.rows; r++) {
+      for (let c = 0; c < data.cols; c++) {
+        const cell = data.cells[r][c];
+        if (cell.type !== 'clue') continue;
+        (cell.clues || []).forEach((clue, idx) => {
+          const dir = clue.arrow_pos || 'ap-right';
+          const cells = [];
+          let cc = c, rr = r;
+          
+          const dirs = {
+            'ap-right': [0, 1],
+            'ap-left': [0, -1],
+            'ap-down': [1, 0],
+            'ap-up': [-1, 0],
+            'ap-ur': [-1, 1],
+            'ap-ul': [-1, -1],
+            'ap-dr': [1, 1],
+            'ap-dl': [1, -1]
+          };
+          const [dr, dc] = dirs[dir] || [0, 1];
+          
+          while (true) {
+            cc += dc; rr += dr;
+            if (rr < 0 || rr >= data.rows || cc < 0 || cc >= data.cols) break;
+            const nextCell = data.cells[rr][cc];
+            if (nextCell.type !== 'answer') break;
+            cells.push([rr, cc]);
+          }
+          
+          if (cells.length > 0) {
+            let ans = '';
+            if (clue.answer) ans = clue.answer.toUpperCase();
+            sWords.push({ clue, cells, ans, clueIdx: idx, clueR: r, clueC: c });
+          }
         });
       }
-    }, 150);
-  } catch(e) {
-    document.getElementById('s-grid').innerHTML = `<tr><td style="padding:24px;color:#c00">Could not load: ${escHtml(e.message)}</td></tr>`;
-  }
-}
-
-async function closeSolver() {
-  // Auto-save on close
-  if (sCurPuzzleId) {
-    const alreadyDone = _cloudProgress[sCurPuzzleId] && _cloudProgress[sCurPuzzleId].complete;
-    if (!alreadyDone) {
-      const answers = {};
-      document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
-        if (inp.value) answers[inp.dataset.r + ',' + inp.dataset.c] = inp.value;
-      });
-      if (Object.keys(answers).length > 0) await _silentSave(answers);
     }
-    if (sbGetUser() && _timerSeconds > 0) await sbSaveTimeSpent(sCurPuzzleId, _timerSeconds % 60);
+    
+    // Load progress
+    const prog = await sbLoadProgress(id);
+    if (prog && prog.answers) {
+      const answers = typeof prog.answers === 'string' ? JSON.parse(prog.answers) : prog.answers;
+      Object.entries(answers).forEach(([key, val]) => {
+        const [r, c] = key.split(',');
+        const inp = document.querySelector(`#s-grid input[data-r="${r}"][data-c="${c}"]`);
+        if (inp) inp.value = val;
+      });
+    }
+    
+    resetTimer();
+    startTimer();
+    startAutoSave();
+    sZoomFit();
+    sHighlight();
+    
+    document.getElementById('solver-overlay').classList.add('open');
+  } catch (e) {
+    console.error('Solve error:', e);
+    alert('Failed to open puzzle.');
   }
-  stopTimer(); stopAutoSave();
-  document.getElementById('solver-overlay').classList.remove('open');
-  document.body.style.overflow = '';
-  history.replaceState(null, '', 'directory.html');
-  sActive = null; sCurPuzzleId = null;
-  renderDir();
 }
 
-async function saveProgress() {
-  if (!sCurPuzzleId) return;
+function closeSolver() {
+  stopTimer();
+  stopAutoSave();
+  document.getElementById('solver-overlay').classList.remove('open');
+  solverSave();
+}
+
+function solverKeydown(e, r, c) {
+  const key = e.key.toUpperCase();
+  if (/^[A-Z]$/.test(key)) {
+    document.querySelector(`#s-grid input[data-r="${r}"][data-c="${c}"]`).value = key;
+    startTimer();
+    const nr = +r, nc = +c;
+    const next = document.querySelector(`#s-grid input[data-r="${nr + 1}"][data-c="${nc}"], #s-grid input[data-r="${nr}"][data-c="${nc + 1}"]`);
+    if (next) next.focus();
+  } else if (e.key === 'Backspace') {
+    e.preventDefault();
+    document.querySelector(`#s-grid input[data-r="${r}"][data-c="${c}"]`).value = '';
+  }
+  
+  // Check for completion
+  checkCompletion();
+}
+
+function selectWord(r, c) {
+  const word = sWords.find(w => w.cells.some(([rr, cc]) => rr === r && cc === c));
+  if (word) setActive(r, c, word.clueIdx);
+}
+
+function setActive(r, c, idx) {
+  sActive = { r, c, idx };
+  sHighlight();
+}
+
+function sHighlight() {
+  document.querySelectorAll('.clue-slot.active-clue').forEach(e => e.classList.remove('active-clue'));
+  document.querySelectorAll('#s-grid input').forEach(e => e.style.background = '');
+  
+  if (!sActive) return;
+  
+  const word = sWords.find(w => w.clueR === sActive.r && w.clueC === sActive.c && w.clueIdx === sActive.idx);
+  if (!word) return;
+  
+  document.querySelector(`#s-grid .clue-slot[data-r="${sActive.r}"][data-c="${sActive.c}"][data-idx="${sActive.idx}"]`)?.classList.add('active-clue');
+  word.cells.forEach(([rr, cc]) => {
+    const inp = document.querySelector(`#s-grid input[data-r="${rr}"][data-c="${cc}"]`);
+    if (inp) inp.style.background = 'rgba(119,68,187,0.1)';
+  });
+}
+
+async function solverSave() {
   const answers = {};
-  document.querySelectorAll('#s-grid input.solve-input').forEach(inp => {
+  document.querySelectorAll('#s-grid input').forEach(inp => {
     if (inp.value) answers[inp.dataset.r + ',' + inp.dataset.c] = inp.value;
   });
-  // Save to localStorage always
-  const local = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
-  local[sCurPuzzleId] = { answers, savedAt: Date.now() };
-  localStorage.setItem('arrowword_progress', JSON.stringify(local));
-  // Save to cloud if signed in
-  if (sbGetUser()) {
+  
+  if (sCurPuzzleId && sbGetUser()) {
     await sbSaveProgress(sCurPuzzleId, answers, false, _checkCounts[sCurPuzzleId] || 0);
-    if (!_cloudProgress[sCurPuzzleId] || !_cloudProgress[sCurPuzzleId].complete) {
-      _cloudProgress[sCurPuzzleId] = { complete: false };
-    }
   }
-  renderDir();
-  const btn = document.querySelector('.solve-toolbar-left .blue');
-  if (btn) { const o = btn.textContent; btn.textContent = '✓ Saved!'; setTimeout(() => btn.textContent = o, 1500); }
 }
 
-function buildSolverGrid(data) {
-  const rows=data.rows,cols=data.cols,cSz=data.cellSizePx||64,tSz=data.textSizePx||12;
-  const arSz=Math.max(10,Math.round(cSz*0.24));
-  sWords=[];sActive=null;
-  const G2=[];
-  for(let r=0;r<rows;r++){G2.push([]);for(let c=0;c<cols;c++)G2[r].push({t:'empty',clues:[],answerOf:null});}
-  data.cells.forEach(cell=>{
-    if(cell.t==='black'){G2[cell.r][cell.c].t='black';}
-    else if(cell.t==='clue'){
-      G2[cell.r][cell.c]={t:'clue',clues:cell.clues.map(cl=>({...cl})),answerOf:null};
-      cell.clues.forEach((cl,ci)=>{
-        const wcells=getWordCells(cl.dir,cl.ans,cell.r,cell.c).filter(([ar,ac])=>ar>=0&&ar<rows&&ac>=0&&ac<cols);
-        sWords.push({or:cell.r,oc:cell.c,ci,cells:wcells,ans:cl.ans});
-        wcells.forEach(([ar,ac],i)=>{if(G2[ar][ac].t==='answer')G2[ar][ac].letter2=cl.ans[i];else G2[ar][ac]={t:'answer',clues:[],answerOf:{letter:cl.ans[i]}};});
-      });
+async function checkCompletion() {
+  if (!sCurPuzzle || !sWords.length) return;
+  
+  let complete = true;
+  let filled = 0, wrong = 0;
+  
+  document.querySelectorAll('#s-grid td.t-answer input').forEach(inp => {
+    const r = +inp.dataset.r, c = +inp.dataset.c;
+    const got = (inp.value || '').toUpperCase();
+    if (!got) { inp.classList.remove('wrong'); return; }
+    filled++;
+    
+    const w = sWords.find(x => x.cells.some(([a, b]) => a === r && b === c));
+    if (!w) return;
+    
+    const idx = w.cells.findIndex(([a, b]) => a === r && b === c);
+    if (got !== w.ans[idx]) {
+      inp.classList.add('wrong');
+      wrong++;
+    } else {
+      inp.classList.remove('wrong');
     }
   });
-  const sz=`width:${cSz}px;height:${cSz}px;min-width:${cSz}px;min-height:${cSz}px;max-width:${cSz}px;max-height:${cSz}px`;
-  const tbl=document.getElementById('s-grid');tbl.innerHTML='';
-  for(let r=0;r<rows;r++){
-    const tr=document.createElement('tr');
-    for(let c=0;c<cols;c++){
-      const cell=G2[r][c],td=document.createElement('td');td.setAttribute('style',sz);
-      if(cell.t==='black'){td.className='t-black';}
-      else if(cell.t==='clue'){
-        td.className='t-clue';
-        const inner=document.createElement('div');inner.className='clue-inner';
-        const isMulti=cell.clues.length>1;
-        cell.clues.forEach((cl,idx)=>{
-          if(idx>0){const dv=document.createElement('div');dv.className='clue-divider';inner.appendChild(dv);}
-          const slot=document.createElement('div');slot.className='clue-slot '+eAPC(cl.dir,isMulti);
-          slot.dataset.or=r;slot.dataset.oc=c;slot.dataset.ci=idx;
-          const fs=cl.textSize&&cl.textSize>0?cl.textSize:tSz;
-          slot.style.flex=fs+' 1 0';
-          slot.innerHTML=`<div class="slot-text" style="font-size:${fs}px">${escHtml(cl.clue||'?')}</div><div class="slot-arrow">${arrowSVG(cl.dir,arSz)}</div>`;
-          slot.addEventListener('click',e=>{e.stopPropagation();sPickClue(+slot.dataset.or,+slot.dataset.oc,+slot.dataset.ci);});
-          inner.appendChild(slot);
-        });
-        td.appendChild(inner);
-      }else if(cell.t==='answer'){
-        td.className='t-answer';
-        const inp=document.createElement('input');inp.className='solve-input';inp.type='text';inp.maxLength=1;
-        inp.dataset.r=r;inp.dataset.c=c;inp.style.fontSize=Math.round(cSz*0.38)+'px';
-        inp.setAttribute('autocapitalize','characters');inp.setAttribute('autocomplete','off');inp.setAttribute('autocorrect','off');inp.setAttribute('spellcheck','false');
-        inp.addEventListener('input',e=>{startTimer();sSolveInput(e);});inp.addEventListener('keydown',sSolveKeydown);inp.addEventListener('focus',e=>{startTimer();sSolveFocus(e);});
-        td.appendChild(inp);
-      }else{td.className='t-empty';}
-      tr.appendChild(td);
-    }
-    tbl.appendChild(tr);
+  
+  if (wrong > 0 || filled !== Object.values(sWords).reduce((sum, w) => sum + w.cells.length, 0)) {
+    complete = false;
   }
-}
-
-function fitSolverText(){document.querySelectorAll('#s-grid .clue-slot').forEach(slot=>{const t=slot.querySelector('.slot-text');if(!t)return;let fs=parseFloat(t.style.fontSize)||10,s=40;while(s-->0&&fs>4&&(slot.scrollWidth>slot.clientWidth+1||slot.scrollHeight>slot.clientHeight+1)){fs-=0.5;t.style.fontSize=fs+'px';}});}
-function sGetInp(r,c){return document.querySelector('#s-grid input.solve-input[data-r="'+r+'"][data-c="'+c+'"]');}
-function sPickClue(or,oc,ci){const w=sWords.find(x=>x.or===or&&x.oc===oc&&x.ci===ci);if(!w)return;sActive={or,oc,ci,cells:w.cells,ans:w.ans,idx:0};sHighlight();const inp=sGetInp(w.cells[0][0],w.cells[0][1]);if(inp){inp.focus();inp.select();}}
-function sHighlight(){
-  document.querySelectorAll('#s-grid .solve-input').forEach(i=>i.classList.remove('in-active-word','active-cell'));
-  document.querySelectorAll('#s-grid .clue-slot').forEach(s=>s.classList.remove('active-clue'));
-  if(!sActive)return;
-  sActive.cells.forEach(([r,c],i)=>{const inp=sGetInp(r,c);if(inp){inp.classList.add('in-active-word');if(i===sActive.idx)inp.classList.add('active-cell');}});
-  const slot=document.querySelector('#s-grid .clue-slot[data-or="'+sActive.or+'"][data-oc="'+sActive.oc+'"][data-ci="'+sActive.ci+'"]');
-  if(slot)slot.classList.add('active-clue');
-}
-function sSolveFocus(e){
-  const inp=e.target;inp.classList.remove('wrong');
-  const r=+inp.dataset.r,c=+inp.dataset.c;
-  if(sActive){const i=sActive.cells.findIndex(([a,b])=>a===r&&b===c);if(i>=0){sActive.idx=i;sHighlight();return;}}
-  const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));
-  if(w){sActive={or:w.or,oc:w.oc,ci:w.ci,cells:w.cells,ans:w.ans,idx:w.cells.findIndex(([a,b])=>a===r&&b===c)};if(sActive.idx<0)sActive.idx=0;sHighlight();}
-}
-function sSolveInput(e){
-  const inp=e.target;inp.value=(inp.value||'').slice(-1).toUpperCase().replace(/[^A-Z]/,'');inp.classList.remove('wrong');
-  if(inp.value&&sActive){const next=sActive.idx+1;if(next<sActive.cells.length){sActive.idx=next;const[nr,nc]=sActive.cells[next];const ni=sGetInp(nr,nc);if(ni){ni.focus();ni.select();}}else sHighlight();}
-  sMaybeCelebrate();
-}
-function sSolveKeydown(e){
-  const inp=e.target;
-  if(e.key==='Backspace'){if(inp.value)return;if(sActive&&sActive.idx>0){e.preventDefault();sActive.idx--;const[pr,pc]=sActive.cells[sActive.idx];const pi=sGetInp(pr,pc);if(pi){pi.value='';pi.classList.remove('wrong');pi.focus();pi.select();}}}
-  else if(e.key==='ArrowRight'||e.key==='ArrowDown'){if(sActive&&sActive.idx<sActive.cells.length-1){e.preventDefault();sActive.idx++;const[nr,nc]=sActive.cells[sActive.idx];const ni=sGetInp(nr,nc);if(ni){ni.focus();ni.select();}}}
-  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){if(sActive&&sActive.idx>0){e.preventDefault();sActive.idx--;const[pr,pc]=sActive.cells[sActive.idx];const pi=sGetInp(pr,pc);if(pi){pi.focus();pi.select();}}}
-  else if(e.key==='Escape'){sActive=null;sHighlight();inp.blur();}
-}
-async function sMaybeCelebrate(){
-  // Check every word is fully and correctly filled — works for all grid sizes
-  if(!sWords.length)return;
-  for(let wi=0;wi<sWords.length;wi++){
-    const w=sWords[wi];
-    for(let ci=0;ci<w.cells.length;ci++){
-      const [r,col]=w.cells[ci];
-      const inp=sGetInp(r,col);
-      if(!inp||(inp.value||'').toUpperCase()!==w.ans[ci])return;
-    }
-  }
-  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
-  sActive=null;sHighlight();
-  if(sCurPuzzleId){
+  
+  if (complete && filled > 0 && wrong === 0) {
+    // Puzzle complete!
+    stopTimer();
+    stopAutoSave();
+    
     // Save completion
-    const answers={};
-    document.querySelectorAll('#s-grid input.solve-input').forEach(inp=>{if(inp.value)answers[inp.dataset.r+','+inp.dataset.c]=inp.value;});
-    const complete=JSON.parse(localStorage.getItem('arrowword_complete')||'{}');
-    complete[sCurPuzzleId]=Date.now();
-    localStorage.setItem('arrowword_complete',JSON.stringify(complete));
-    const prog=JSON.parse(localStorage.getItem('arrowword_progress')||'{}');
-    delete prog[sCurPuzzleId];
-    localStorage.setItem('arrowword_progress',JSON.stringify(prog));
-    if(sbGetUser()){
-      await sbSaveProgress(sCurPuzzleId,answers,true,_checkCounts[sCurPuzzleId]||0);
-      _cloudProgress[sCurPuzzleId]={complete:true};
+    const answers = {};
+    document.querySelectorAll('#s-grid input').forEach(inp => {
+      if (inp.value) answers[inp.dataset.r + ',' + inp.dataset.c] = inp.value;
+    });
+    
+    if (sCurPuzzleId && sbGetUser()) {
+      await sbSaveProgress(sCurPuzzleId, answers, true, _checkCounts[sCurPuzzleId] || 0);
+      _cloudProgress[sCurPuzzleId] = { complete: true };
     }
-    renderDir();
+    
+    // Show merged completion + rating modal
+    document.getElementById('celebration').style.display = 'block';
+    document.getElementById('completion-title').textContent = 'Puzzle Complete! 🎉';
+    document.getElementById('completion-msg').textContent = `Congratulations! You solved "${sCurPuzzle.title}". Please rate your experience.`;
+    document.getElementById('rating-modal').classList.add('open');
   }
-  document.getElementById('celebrate').style.display='flex';
-  stopTimer(); stopAutoSave();
-  setTimeout(()=>{ document.getElementById('celebrate').style.display='none'; showRatingModal(); }, 2500);
 }
-async function solverCheck(){
-  let wrong=0,filled=0;
-  document.querySelectorAll('#s-grid td.t-answer input').forEach(inp=>{
-    const r=+inp.dataset.r,c=+inp.dataset.c;
-    const got=(inp.value||'').toUpperCase();if(!got){inp.classList.remove('wrong');return;}filled++;
-    const w=sWords.find(x=>x.cells.some(([a,b])=>a===r&&b===c));if(!w)return;
-    const idx=w.cells.findIndex(([a,b])=>a===r&&b===c);
-    if(got!==w.ans[idx]){inp.classList.add('wrong');wrong++;}else inp.classList.remove('wrong');
+
+function solverCheck() {
+  let filled = 0, wrong = 0;
+  document.querySelectorAll('#s-grid td.t-answer input').forEach(inp => {
+    const r = +inp.dataset.r, c = +inp.dataset.c;
+    const got = (inp.value || '').toUpperCase();
+    if (!got) { inp.classList.remove('wrong'); return; }
+    filled++;
+    
+    const w = sWords.find(x => x.cells.some(([a, b]) => a === r && b === c));
+    if (!w) return;
+    
+    const idx = w.cells.findIndex(([a, b]) => a === r && b === c);
+    if (got !== w.ans[idx]) {
+      inp.classList.add('wrong');
+      wrong++;
+    } else {
+      inp.classList.remove('wrong');
+    }
   });
-  sActive=null;sHighlight();
-  // Track check count
-  if(sCurPuzzleId){
-    _checkCounts[sCurPuzzleId]=(_checkCounts[sCurPuzzleId]||0)+1;
-    if(sbGetUser()) await sbIncrementCheckCount(sCurPuzzleId);
+  
+  sActive = null;
+  sHighlight();
+  
+  if (sCurPuzzleId && sbGetUser()) {
+    _checkCounts[sCurPuzzleId] = (_checkCounts[sCurPuzzleId] || 0) + 1;
+    sbIncrementCheckCount(sCurPuzzleId);
   }
-  if(!filled)alert('No letters typed yet.');
-  else alert(`${filled-wrong} correct, ${wrong} wrong (out of ${filled} typed).`);
+  
+  if (!filled) alert('No letters typed yet.');
+  else alert(`${filled - wrong} correct, ${wrong} wrong (out of ${filled} typed).`);
 }
-function solverClear(){if(!confirm('Clear all your answers?'))return;document.querySelectorAll('#s-grid .solve-input').forEach(i=>{i.value='';i.classList.remove('wrong');});sActive=null;sHighlight();}
-function sApplyZoom(){const w=document.getElementById('s-zoom-wrap');if(!w)return;w.style.transform='scale('+sCurZoom+')';document.getElementById('s-zoom-val').textContent=Math.round(sCurZoom*100)+'%';const tbl=document.getElementById('s-grid');if(tbl&&tbl.offsetWidth){w.style.width=(tbl.offsetWidth*sCurZoom)+'px';w.style.height=(tbl.offsetHeight*sCurZoom)+'px';}}
-function sSetZoom(z){sCurZoom=Math.max(0.25,Math.min(3,z));sApplyZoom();}
-function sZoomBy(d){sSetZoom(sCurZoom+d);}
-function sZoomFit(){const wrap=document.getElementById('s-grid-wrap');const tbl=document.getElementById('s-grid');if(!wrap||!tbl||!tbl.offsetWidth)return;sSetZoom(Math.min(1,(wrap.clientWidth-20)/tbl.offsetWidth));}
 
+function solverClear() {
+  if (!confirm('Clear all your answers?')) return;
+  document.querySelectorAll('#s-grid .solve-input').forEach(i => {
+    i.value = '';
+    i.classList.remove('wrong');
+  });
+  sActive = null;
+  sHighlight();
+}
 
-// ── Timer ─────────────────────────────────────────────────────────────────────
+function sApplyZoom() {
+  const w = document.getElementById('s-zoom-wrap');
+  if (!w) return;
+  w.style.transform = 'scale(' + sCurZoom + ')';
+  document.getElementById('s-zoom-val').textContent = Math.round(sCurZoom * 100) + '%';
+  const tbl = document.getElementById('s-grid');
+  if (tbl && tbl.offsetWidth) {
+    w.style.width = (tbl.offsetWidth * sCurZoom) + 'px';
+    w.style.height = (tbl.offsetHeight * sCurZoom) + 'px';
+  }
+}
+
+function sSetZoom(z) {
+  sCurZoom = Math.max(0.25, Math.min(3, z));
+  sApplyZoom();
+}
+
+function sZoomBy(d) { sSetZoom(sCurZoom + d); }
+
+function sZoomFit() {
+  const wrap = document.getElementById('s-grid-wrap');
+  const tbl = document.getElementById('s-grid');
+  if (!wrap || !tbl || !tbl.offsetWidth) return;
+  sSetZoom(Math.min(1, (wrap.clientWidth - 20) / tbl.offsetWidth));
+}
+
+function printPuzzle() {
+  const w = window.open('', '', 'width=800,height=600');
+  const grid = document.getElementById('s-grid').cloneNode(true);
+  w.document.write(`<html><body style="font-family:Arial;padding:20px">
+    <h1>${sCurPuzzle.title}</h1>
+    <table style="border-collapse:collapse;margin:20px 0">${grid.innerHTML}</table>
+  </body></html>`);
+  w.document.close();
+  w.print();
+}
+
+// ── Timer ──────────────────────────────────────────────────────────────────────
 let _timerInterval = null;
 let _timerSeconds = 0;
 let _timerStarted = false;
@@ -722,7 +803,7 @@ function startTimer() {
     const m = Math.floor(_timerSeconds / 60);
     const s = _timerSeconds % 60;
     const el = document.getElementById('solver-timer');
-    if (el) el.textContent = m + ':' + String(s).padStart(2,'0');
+    if (el) el.textContent = m + ':' + String(s).padStart(2, '0');
   }, 1000);
 }
 
@@ -739,7 +820,7 @@ function resetTimer() {
   if (el) el.textContent = '0:00';
 }
 
-// ── Auto-save ─────────────────────────────────────────────────────────────────
+// ── Auto-save ──────────────────────────────────────────────────────────────────
 let _autoSaveInterval = null;
 let _lastSavedAnswers = '';
 
@@ -765,12 +846,9 @@ function stopAutoSave() {
 
 async function _silentSave(answers) {
   if (!sCurPuzzleId) return;
-  // Never overwrite a completed puzzle with in-progress
   const alreadyComplete = _cloudProgress[sCurPuzzleId] && _cloudProgress[sCurPuzzleId].complete;
   if (alreadyComplete) return;
-  const local = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
-  local[sCurPuzzleId] = { answers, savedAt: Date.now() };
-  localStorage.setItem('arrowword_progress', JSON.stringify(local));
+  
   if (sbGetUser()) {
     await sbSaveProgress(sCurPuzzleId, answers, false, _checkCounts[sCurPuzzleId] || 0);
     await sbSaveTimeSpent(sCurPuzzleId, 60);
@@ -778,9 +856,8 @@ async function _silentSave(answers) {
   }
 }
 
-// ── Ratings ───────────────────────────────────────────────────────────────────
+// ── Completion + Rating (merged, no skip) ────────────────────────────────────
 let _selectedRating = 0;
-let _puzzleRatings = {};
 
 function setStar(v) {
   _selectedRating = v;
@@ -789,48 +866,75 @@ function setStar(v) {
   });
 }
 
-async function submitRating() {
-  if (!_selectedRating) { alert('Please select a star rating.'); return; }
+async function submitCompletionRating() {
+  if (!_selectedRating) {
+    alert('Please select a star rating.');
+    return;
+  }
+  
+  // Get comment if provided
+  const comment = (document.getElementById('completion-comment').value || '').trim();
+  
+  // Save rating
   if (sbGetUser() && sCurPuzzleId) {
     await sbSaveRating(sCurPuzzleId, _selectedRating);
-    _puzzleRatings[sCurPuzzleId] = { avg_rating: _selectedRating };
+    
+    // Save optional comment
+    if (comment && sbGetUser()) {
+      await sbSaveComment(sCurPuzzleId, comment, 'feedback');
+    }
   }
-  closeRating();
+  
+  closeCompletionModal();
   renderDir();
 }
 
-function closeRating() {
+function closeCompletionModal() {
   document.getElementById('rating-modal').classList.remove('open');
+  document.getElementById('completion-comment').value = '';
   _selectedRating = 0;
   document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
+  document.getElementById('celebration').style.display = 'none';
 }
 
-function showRatingModal() {
-  if (!sbGetUser()) return; // only for signed-in users
-  document.getElementById('rating-modal').classList.add('open');
+// ── Comment/Bug Report Modal ───────────────────────────────────────────────────
+function openCommentModal() {
+  document.getElementById('comment-report-modal').classList.add('open');
+  document.getElementById('comment-text').value = '';
+  document.querySelector('input[name="comment-type"][value="feedback"]').checked = true;
+}
+
+function closeCommentModal() {
+  document.getElementById('comment-report-modal').classList.remove('open');
+}
+
+async function submitCommentReport() {
+  const comment = (document.getElementById('comment-text').value || '').trim();
+  const type = document.querySelector('input[name="comment-type"]:checked').value;
+  
+  if (!comment) {
+    alert('Please enter a comment.');
+    return;
+  }
+  
+  if (sbGetUser() && sCurPuzzleId) {
+    const success = await sbSaveComment(sCurPuzzleId, comment, type);
+    if (success) {
+      alert('Thank you! Your feedback has been recorded.');
+      closeCommentModal();
+    } else {
+      alert('Failed to save comment. Please try again.');
+    }
+  } else {
+    alert('Please sign in to submit feedback.');
+  }
 }
 
 loadDir();
-(function(){const id=new URLSearchParams(location.search).get('id');if(id)setTimeout(()=>solveClicked(id),300);})();
+(function() {
+  const id = new URLSearchParams(location.search).get('id');
+  if (id) setTimeout(() => solveClicked(id), 300);
+})();
 </script>
-
-<div class="rating-modal" id="rating-modal">
-  <div class="rating-box">
-    <div style="font-size:36px;margin-bottom:8px">⭐</div>
-    <h2>Rate this puzzle</h2>
-    <p>How did you find it? Your feedback helps improve future puzzles.</p>
-    <div class="stars" id="stars">
-      <span class="star" data-v="1" onclick="setStar(1)">★</span>
-      <span class="star" data-v="2" onclick="setStar(2)">★</span>
-      <span class="star" data-v="3" onclick="setStar(3)">★</span>
-      <span class="star" data-v="4" onclick="setStar(4)">★</span>
-      <span class="star" data-v="5" onclick="setStar(5)">★</span>
-    </div>
-    <div>
-      <button class="btn-rate" onclick="submitRating()">Submit rating</button>
-      <button class="btn-skip" onclick="closeRating()">Skip</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>

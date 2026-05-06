@@ -1,4 +1,4 @@
-// supabase-auth.js — v18
+// supabase-auth.js — v20
 // ══════════════════════════════════════════════════════════════════════════════
 // Handles all Supabase auth (Google, Facebook) and user progress storage.
 // Loaded by directory.html and admin.html.
@@ -178,5 +178,39 @@ async function sbSaveTimeSpent(puzzleId, seconds) {
 async function sbAdminGetRatings() {
   if (!_sb) return [];
   const { data } = await _sb.from('puzzle_ratings').select('*');
+  return data || [];
+}
+
+// ── Comments API ──────────────────────────────────────────────────────────────
+async function sbSaveComment(puzzleId, commentText, commentType = 'feedback') {
+  if (!_sb || !_user) return false;
+  const row = {
+    puzzle_id: puzzleId,
+    user_id: _user.id,
+    comment_text: commentText,
+    comment_type: commentType,
+    created_at: new Date().toISOString()
+  };
+  const { error } = await _sb.from('puzzle_comments').insert(row);
+  if (error) { console.error('Save comment error:', error); return false; }
+  return true;
+}
+
+async function sbLoadCommentsForPuzzle(puzzleId) {
+  if (!_sb) return [];
+  const { data, error } = await _sb.from('puzzle_comments')
+    .select('*')
+    .eq('puzzle_id', puzzleId)
+    .order('created_at', { ascending: false });
+  if (error) { console.error('Load comments error:', error); return []; }
+  return data || [];
+}
+
+async function sbAdminGetAllComments() {
+  if (!_sb) return [];
+  const { data, error } = await _sb.from('puzzle_comments')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) { console.error('Admin comments query error:', error); return []; }
   return data || [];
 }
