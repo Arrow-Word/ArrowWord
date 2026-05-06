@@ -8,8 +8,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
-<title>Delete Puzzles — Arrow Word Puzzles</title>
-<!-- Arrow Word Puzzles v17 - Password protected delete page -->
+<title>Manage & Delete Puzzles — Arrow Word Puzzles</title>
+<!-- Arrow Word Puzzles v20 - Password protected manage/delete page -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;background:#f5f0ff;color:#222;min-height:100vh}
@@ -50,6 +50,20 @@ nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:cen
 .prow-size{font-size:11px;color:#888;background:#f0ecff;display:inline-block;padding:1px 8px;border-radius:4px;margin-left:6px}
 .btn-del-one{background:#fff;border:1px solid #f4a8a8;color:#dc3545;border-radius:5px;padding:6px 12px;font-size:12px;cursor:pointer;flex-shrink:0}
 .btn-del-one:hover{background:#fdd}
+.btn-edit-one{background:#fff;border:1px solid #d0e8ff;color:#004a99;border-radius:5px;padding:6px 12px;font-size:12px;cursor:pointer;flex-shrink:0}
+.btn-edit-one:hover{background:#e8f4ff}
+.rename-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:500;align-items:center;justify-content:center;padding:16px}
+.rename-modal.open{display:flex}
+.rename-box{background:#fff;border-radius:12px;padding:28px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+.rename-box h2{font-size:18px;font-weight:700;color:#443366;margin-bottom:12px}
+.rename-box input{width:100%;padding:10px 12px;font-size:14px;border:1px solid #ccc;border-radius:6px;margin-bottom:12px}
+.rename-box input:focus{outline:none;border-color:#004a99;box-shadow:0 0 0 2px rgba(0,74,153,0.1)}
+.rename-buttons{display:flex;gap:8px;justify-content:flex-end}
+.rename-buttons button{padding:10px 16px;font-size:13px;border:none;border-radius:6px;cursor:pointer;font-weight:600}
+.btn-rename-save{background:#004a99;color:#fff}
+.btn-rename-save:hover{background:#003380}
+.btn-rename-cancel{background:#f0f0f0;color:#666;border:1px solid #ddd}
+.btn-rename-cancel:hover{background:#e8e8e8}
 .empty{text-align:center;padding:48px;color:#aaa;font-style:italic}
 .loading{text-align:center;padding:48px;color:#aaa;font-style:italic}
 .count{font-size:12px;color:#999;margin-bottom:12px}
@@ -77,8 +91,8 @@ nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:cen
 
 <!-- Main content (shown after unlock) -->
 <div id="main-content">
-  <div class="page-title">🗑 Delete Puzzles</div>
-  <div class="page-sub">Select puzzles to delete from the web directory. This cannot be undone.</div>
+  <div class="page-title">🔧 Manage & Delete Puzzles</div>
+  <div class="page-sub">Rename or delete puzzles from the web directory. Changes cannot be undone.</div>
   <div class="toolbar">
     <a href="directory.html" class="btn-back">← Back to directory</a>
     <label class="select-all-wrap">
@@ -88,6 +102,18 @@ nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:cen
   </div>
   <div class="count" id="count-line"></div>
   <div class="puzzle-list" id="puzzle-list"><div class="loading">Loading…</div></div>
+</div>
+
+<!-- Rename modal -->
+<div class="rename-modal" id="rename-modal">
+  <div class="rename-box">
+    <h2>Rename Puzzle</h2>
+    <input type="text" id="rename-input" placeholder="New puzzle name" onkeydown="if(event.key==='Enter')renameConfirm()">
+    <div class="rename-buttons">
+      <button class="btn-rename-cancel" onclick="renameCancel()">Cancel</button>
+      <button class="btn-rename-save" onclick="renameConfirm()">Save</button>
+    </div>
+  </div>
 </div>
 
 <script src="cloud-storage.js"></script>
@@ -140,6 +166,7 @@ function renderList(){
         <div class="prow-title">${escHtml(title)}</div>
         <div class="prow-meta">Published ${p.publishedAt||'unknown'}${size?'<span class="prow-size">'+size+'</span>':''}</div>
       </div>
+      <button class="btn-edit-one" onclick="renameStart('${p.id}','${safetitle}')">✏️ Rename</button>
       <button class="btn-del-one" onclick="deleteOne('${p.id}','${safetitle}')">Delete</button>`;
     row.querySelector('.pcheck').addEventListener('change',function(){row.classList.toggle('checked',this.checked);});
     list.appendChild(row);
@@ -194,6 +221,43 @@ async function deleteSelected(){
     alert('Error during deletion: '+e.message+'\n\nSome puzzles may have been deleted. Refresh to see current state.');
     btn.disabled=false;
     await loadPuzzles();
+  }
+}
+
+// ── Rename ────────────────────────────────────────────────────────────────────
+let _renameId = null;
+
+function renameStart(id, title) {
+  _renameId = id;
+  document.getElementById('rename-input').value = title;
+  document.getElementById('rename-modal').classList.add('open');
+  setTimeout(() => document.getElementById('rename-input').focus(), 100);
+}
+
+function renameCancel() {
+  document.getElementById('rename-modal').classList.remove('open');
+  _renameId = null;
+}
+
+async function renameConfirm() {
+  const newTitle = (document.getElementById('rename-input').value || '').trim();
+  if (!newTitle) {
+    alert('Please enter a puzzle name.');
+    return;
+  }
+  if (!_renameId) return;
+  
+  const puzzle = puzzles.find(p => p.id === _renameId);
+  if (!puzzle) return;
+  
+  try {
+    // Publish with new title (keeps same ID and data)
+    await cloudPublishPuzzle(newTitle, puzzle.data);
+    puzzles = await cloudGetPuzzles();
+    renderList();
+    renameCancel();
+  } catch (e) {
+    alert('Could not rename: ' + e.message);
   }
 }
 </script>
