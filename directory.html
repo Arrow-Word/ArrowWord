@@ -180,7 +180,9 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 .rating-box h2{font-size:18px;font-weight:700;color:#443366;margin-bottom:8px}
 .rating-box p{font-size:13px;color:#666;margin-bottom:20px}
 .stars{display:flex;justify-content:center;gap:8px;margin-bottom:20px}
-.star{font-size:40px;cursor:pointer;opacity:0.3;transition:opacity .15s,transform .1s}
+.star{font-size:40px;cursor:pointer;opacity:0.3;transition:opacity .15s,transform .1s;color:#f0a500}
+.star:hover{opacity:1;transform:scale(1.1)}
+.star.active{opacity:1}
 .star.active{opacity:1}
 .star:hover{transform:scale(1.15)}
 .btn-rate{background:#7744bb;color:#fff;border:none;border-radius:7px;padding:11px 28px;font-size:14px;font-weight:600;cursor:pointer;margin-right:8px}
@@ -814,8 +816,9 @@ async function submitCompletionRating() {
     await sbSaveRating(sCurPuzzleId, _selectedRating);
     _puzzleRatings[sCurPuzzleId] = { avg_rating: _selectedRating };
     
+    // Save as 'rating_feedback' type (separate from general feedback)
     if (comment) {
-      await sbSaveComment(sCurPuzzleId, comment, 'feedback');
+      await sbSaveComment(sCurPuzzleId, comment, 'rating_feedback');
     }
   }
   closeCompletionModal();
@@ -835,6 +838,7 @@ function showRatingModal() {
   document.getElementById('completion-title').textContent = 'Puzzle Complete! 🎉';
   document.getElementById('completion-msg').textContent = 'Congratulations! Please rate your experience.';
   document.getElementById('celebration').style.display = 'block';
+  setStar(5); // Set default to 5 stars
   document.getElementById('rating-modal').classList.add('open');
 }
 

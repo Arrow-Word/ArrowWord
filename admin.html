@@ -198,7 +198,9 @@ async function loadStats(){
       cBody.innerHTML = sorted.map(c => {
         const u = userMap[c.user_id];
         const userName = u ? (u.display_name || u.email || 'Unknown') : 'Unknown';
-        const typeLabel = c.comment_type === 'bug_report' ? '🐛 Bug' : '💬 Feedback';
+        let typeLabel = '💬 Feedback';
+        if (c.comment_type === 'bug_report') typeLabel = '🐛 Bug';
+        else if (c.comment_type === 'rating_feedback') typeLabel = '⭐ Rating comment';
         const commentText = c.comment_text.substring(0, 100) + (c.comment_text.length > 100 ? '…' : '');
         return `<tr>
           <td>${puzzleMap[c.puzzle_id]||c.puzzle_id}</td>
