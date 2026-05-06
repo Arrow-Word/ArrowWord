@@ -11,7 +11,7 @@
 <title>Puzzle Builder v19 — Arrow Word Puzzles</title>
 <!-- Arrow Word Puzzle Builder
      ════════════════════════════════════════════════
-     CURRENT VERSION: v19
+     CURRENT VERSION: v20
      ════════════════════════════════════════════════
      CHANGELOG:
      v17 - Fixed cloud storage (JSONBin) not visible cross-device/browser.
@@ -182,14 +182,13 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
     <a style="color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="index.html">Home</a>
     <a style="color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="directory.html">Puzzles</a>
     <a style="background:rgba(255,255,255,0.2);color:#fff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500" href="builder.html">Builder</a>
-    <span style="color:#e8d8ff;font-size:12px;opacity:0.7">v19</span>
     
   </div>
 </nav>
 <script src="cloud-storage.js"></script>
 <script>
 const BUILDER_PASSWORD = 'arrowword2024';
-const BUILDER_UNLOCK_KEY = 'builder_unlocked_v19';
+const BUILDER_UNLOCK_KEY = 'builder_unlocked_v20';
 function checkBuilderPwd(){
   const val=document.getElementById('builder-pwd').value;
   if(val===BUILDER_PASSWORD){sessionStorage.setItem(BUILDER_UNLOCK_KEY,'1');document.getElementById('builder-lock').style.display='none';document.getElementById('builder-pwd').value='';}
@@ -200,7 +199,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-    title="Click for change history">v19 ▾</button>
+    title="Click for change history">v20 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
@@ -2078,9 +2077,12 @@ const CHANGELOG=[
 function openChangelog(){
   const body=document.getElementById('changelog-body');
   const log=[
-    {v:'v17',notes:['Fixed cloud storage not visible cross-device — JSONBin credentials must be set in cloud-storage.js and uploaded to GitHub.','Directory default sort changed to A-Z.','Check Answers clears selection highlight after checking.','Clicking whitespace in solver deselects current word.','Added Save Progress button top-left of solver.','Moved Print/Reveal/Clear to top-right of solver toolbar.','Completed and in-progress badges on puzzle directory cards.','Removed Delete Puzzles button from directory.','Added Delete from directory button in Save & Load.','Renamed Publish File to Export File.','Re-added per-clue font size in clue editor.','Removed Publish to Web Directory section from Save & Load.']},
-    {v:'v16',notes:['Solver-focused home page. About-builder page. Delete-puzzles page (password protected).','Size grouping tabs in directory. Builder page password protected.']},
-    {v:'v15',notes:['Switched to JSONBin cloud storage. Anyone can now publish without a token. Fixed SHA mismatch error.']},
+    {v:'v20',notes:['Merged celebration and rating modal — no skip button. Added optional comments field to completion modal. Added "Comment / Report" button in solver (orange). Separated comment types: Feedback, Bug reports, Rating comments. Updated admin dashboard to show all 3 comment types. Yellow stars in rating (default 5 stars). Updated delete-puzzles page to "Manage & Delete Puzzles" with rename functionality.']},
+    {v:'v19',notes:['Switched puzzle storage from GitHub to Supabase (no tokens needed). Published puzzles now managed in builder. Directory sorting (A-Z, Newest, Oldest). Favicon added. Sign-in required to solve. Sanity cleanup.']},
+    {v:'v18',notes:['Complete auth rewrite using Supabase. Real Google OAuth login. Facebook login support. Sign-in prompt appears on Solve click. Progress and completions saved to cloud. Check count tracked per user. Cross-device sync. Reveal button removed. Admin dashboard foundation. Per-user stats (puzzles started, completed, checks).']},
+    {v:'v17',notes:['Fixed cloud storage cross-device (GitHub CDN + API). Directory default A-Z. Check clears selection. Save Progress button. Completed/in-progress badges. Delete from directory button. Renamed Export. Per-clue font size restored. No-cache headers.']},
+    {v:'v16',notes:['Solver-focused home page. About-builder page. Delete-puzzles page (password protected). Size grouping tabs. Builder password protected.']},
+    {v:'v15',notes:['Switched to JSONBin cloud storage. Anyone can publish without token.']},
     {v:'v14',notes:['Multi-page site. Navbar. Publish to web directory button.']},
     {v:'v13',notes:['Zoom controls and pinch-to-zoom.']},
     {v:'v12',notes:['Celebration on puzzle completion.']},
