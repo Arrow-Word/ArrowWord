@@ -189,8 +189,14 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
 async function checkBuilderAccess() {
   // Wait for supabase-auth to load
   let attempts = 0;
-  while (typeof sbGetUserRole === 'undefined' && attempts++ < 30) {
+  while (typeof sbGetUserRole === 'undefined' && attempts++ < 50) {
     await new Promise(r => setTimeout(r, 200));
+  }
+  
+  if (typeof sbGetUserRole === 'undefined') {
+    console.error('sbGetUserRole not loaded after 10 seconds');
+    document.getElementById('builder-lock-msg').textContent = 'Error loading authentication. Please refresh the page.';
+    return;
   }
   
   const user = sbGetUser();
@@ -199,17 +205,24 @@ async function checkBuilderAccess() {
     return;
   }
   
-  const role = await sbGetUserRole();
-  if (role === 'builder' || role === 'admin') {
-    document.getElementById('builder-lock').style.display = 'none';
-  } else {
-    document.getElementById('builder-lock-msg').textContent = 'You do not have builder access. Contact an admin to request access.';
+  try {
+    const role = await sbGetUserRole();
+    if (role === 'builder' || role === 'admin') {
+      document.getElementById('builder-lock').style.display = 'none';
+    } else {
+      document.getElementById('builder-lock-msg').textContent = 'You do not have builder access. Contact an admin to request access.';
+    }
+  } catch (e) {
+    console.error('Error checking role:', e);
+    document.getElementById('builder-lock-msg').textContent = 'Error checking permissions. Please refresh.';
   }
 }
 
 // Check access when page loads
-sbOnUserChanged(() => checkBuilderAccess());
-checkBuilderAccess();
+if (typeof sbOnUserChanged !== 'undefined') {
+  sbOnUserChanged(() => checkBuilderAccess());
+}
+setTimeout(() => checkBuilderAccess(), 500);
 </script>
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
