@@ -66,8 +66,8 @@ tr:hover td{background:#faf8ff}
   </table>
   <h2>📊 Puzzle activity</h2>
   <table id="activity-table">
-    <thead><tr><th>User</th><th>Puzzle</th><th>Status</th><th>Time spent</th><th>Rating</th><th>Checks used</th><th>Last saved</th></tr></thead>
-    <tbody><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
+    <thead><tr><th>User</th><th>Puzzle</th><th>Status</th><th>Progress</th><th>Time spent</th><th>Rating</th><th>Checks used</th><th>Last saved</th></tr></thead>
+    <tbody><tr><td colspan="8" class="loading">Loading…</td></tr></tbody>
   </table>
 
   <h2>⭐ Puzzle ratings</h2>
@@ -90,8 +90,8 @@ tr:hover td{background:#faf8ff}
 
 </div>
 
-<script src="supabase-auth.js?v=20260506"></script>
-<script src="cloud-storage.js?v=20260506"></script>
+<script src="supabase-auth.js?v=20260509"></script>
+<script src="cloud-storage.js?v=20260509"></script>
 <script>
 const ADMIN_PASSWORD = 'arrowword2024';
 
@@ -154,7 +154,7 @@ async function loadStats(){
 
     // Activity table
     const aTbody=document.querySelector('#activity-table tbody');
-    if(!progress.length){aTbody.innerHTML='<tr><td colspan="5" style="color:#aaa;font-style:italic">No activity yet.</td></tr>';}
+    if(!progress.length){aTbody.innerHTML='<tr><td colspan="8" style="color:#aaa;font-style:italic">No activity yet.</td></tr>';}
     else {
       const sorted=[...progress].sort((a,b)=>new Date(b.last_saved||0)-new Date(a.last_saved||0));
       // Build user lookup map
@@ -164,12 +164,36 @@ async function loadStats(){
         const u=userMap[p.user_id];
         const userName=u?(u.display_name||u.email||'Unknown'):'Unknown';
         const badge=p.complete?'<span class="badge b-complete">✓ Complete</span>':'<span class="badge b-progress">⏳ In progress</span>';
+        
+        // Calculate progress
+        let progressStr = '—';
+        if (p.answers && !p.complete) {
+          const answers = typeof p.answers === 'string' ? JSON.parse(p.answers) : p.answers;
+          const filled = Object.keys(answers).length;
+          const puzData = sCurPuzzle && sCurPuzzle.id === p.puzzle_id ? sCurPuzzle : null;
+          if (puzData && puzData.data && puzData.data.cells) {
+            let total = 0;
+            for (let r = 0; r < puzData.data.rows; r++) {
+              for (let c = 0; c < puzData.data.cols; c++) {
+                if (puzData.data.cells[r][c].type === 'answer') total++;
+              }
+            }
+            if (total > 0) {
+              const pct = Math.round((filled / total) * 100);
+              progressStr = `${filled} / ${total} (${pct}%)`;
+            }
+          }
+        } else if (p.complete) {
+          progressStr = '100%';
+        }
+        
         const mins = p.time_spent_seconds ? Math.floor(p.time_spent_seconds/60)+'m '+((p.time_spent_seconds||0)%60)+'s' : '—';
-      const stars = p.rating ? '★'.repeat(p.rating)+'☆'.repeat(5-p.rating) : '—';
-      return`<tr>
+        const stars = p.rating ? '★'.repeat(p.rating)+'☆'.repeat(5-p.rating) : '—';
+        return`<tr>
           <td>${userName}</td>
           <td>${puzzleMap[p.puzzle_id]||p.puzzle_id}</td>
           <td>${badge}</td>
+          <td>${progressStr}</td>
           <td>${mins}</td>
           <td style="color:#f0a500">${stars}</td>
           <td>${p.check_count||0}</td>

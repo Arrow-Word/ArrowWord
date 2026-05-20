@@ -301,8 +301,8 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 </div>
 
 
-<script src="cloud-storage.js?v=20260507"></script>
-<script src="supabase-auth.js?v=20260507"></script>
+<script src="cloud-storage.js?v=20260509"></script>
+<script src="supabase-auth.js?v=20260509"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -587,6 +587,14 @@ async function saveProgress() {
   renderDir();
   const btn = document.querySelector('.solve-toolbar-left .blue');
   if (btn) { const o = btn.textContent; btn.textContent = '✓ Saved!'; setTimeout(() => btn.textContent = o, 1500); }
+  // Force clear highlights on mobile to prevent stuck yellow
+  forceResetHighlights();
+}
+
+function forceResetHighlights(){
+  document.querySelectorAll('#s-grid input').forEach(inp => { inp.style.background = ''; });
+  document.querySelectorAll('.clue-slot.active-clue').forEach(e => e.classList.remove('active-clue'));
+  sActive = null;
 }
 
 function buildSolverGrid(data) {
@@ -721,6 +729,8 @@ async function solverCheck(){
   }
   if(!filled)alert('No letters typed yet.');
   else alert(`${filled-wrong} correct, ${wrong} wrong (out of ${filled} typed).`);
+  // Force clear on mobile
+  forceResetHighlights();
 }
 function solverClear(){if(!confirm('Clear all your answers?'))return;document.querySelectorAll('#s-grid .solve-input').forEach(i=>{i.value='';i.classList.remove('wrong');});sActive=null;sHighlight();}
 function sApplyZoom(){const w=document.getElementById('s-zoom-wrap');if(!w)return;w.style.transform='scale('+sCurZoom+')';document.getElementById('s-zoom-val').textContent=Math.round(sCurZoom*100)+'%';const tbl=document.getElementById('s-grid');if(tbl&&tbl.offsetWidth){w.style.width=(tbl.offsetWidth*sCurZoom)+'px';w.style.height=(tbl.offsetHeight*sCurZoom)+'px';}}
