@@ -93,8 +93,8 @@ tr:hover td{background:#faf8ff}
 
 </div>
 
-<script src="supabase-auth.js?v=20260513"></script>
-<script src="cloud-storage.js?v=20260513"></script>
+<script src="supabase-auth.js?v=20260514"></script>
+<script src="cloud-storage.js?v=20260514"></script>
 <script>
 const ADMIN_PASSWORD = 'arrowword2024';
 
@@ -270,11 +270,18 @@ function sortTable(tableId, colIndex, thElement) {
   const tbody = table.querySelector('tbody');
   const rows = Array.from(tbody.querySelectorAll('tr:not(.loading)'));
   
-  if (!rows.length) return;
+  console.log('Sorting table:', tableId, 'column:', colIndex, 'rows found:', rows.length);
+  
+  if (!rows.length) {
+    console.log('No rows found to sort!');
+    return;
+  }
   
   const key = tableId + '-' + colIndex;
   const currentSort = sortState[key] || 'none';
-  const newSort = currentSort === 'asc' ? 'desc' : currentSort === 'desc' ? 'asc' : 'asc';
+  const newSort = currentSort === 'asc' ? 'desc' : 'asc';
+  
+  console.log('Current sort state:', currentSort, 'New sort:', newSort);
   
   // Clear previous sort indicators from all headers in this table
   table.querySelectorAll('th').forEach(h => {
@@ -282,9 +289,7 @@ function sortTable(tableId, colIndex, thElement) {
   });
   
   // Add sort indicator to current column
-  if (newSort !== 'none') {
-    thElement.classList.add('sort-' + newSort);
-  }
+  thElement.classList.add('sort-' + newSort);
   
   // Sort rows
   rows.sort((a, b) => {
@@ -294,9 +299,12 @@ function sortTable(tableId, colIndex, thElement) {
     let aVal = aCell.textContent.trim();
     let bVal = bCell.textContent.trim();
     
+    console.log('Comparing:', aVal, 'vs', bVal);
+    
     // Try to parse as date (YYYY/MM/DD format)
-    const dateRegex = /^\d{4}\/\d{1,2}\/\d{1,2}$/;
+    const dateRegex = /^\d{4}\/\d{2}\/\d{2}$/;
     if (dateRegex.test(aVal) && dateRegex.test(bVal)) {
+      console.log('Detected as dates');
       const aDate = new Date(aVal).getTime();
       const bDate = new Date(bVal).getTime();
       return newSort === 'asc' ? aDate - bDate : bDate - aDate;
@@ -306,9 +314,11 @@ function sortTable(tableId, colIndex, thElement) {
     const aNum = parseFloat(aVal);
     const bNum = parseFloat(bVal);
     if (!isNaN(aNum) && !isNaN(bNum)) {
+      console.log('Detected as numbers');
       return newSort === 'asc' ? aNum - bNum : bNum - aNum;
     }
     
+    console.log('Detected as strings');
     // String comparison
     return newSort === 'asc' 
       ? aVal.localeCompare(bVal)
@@ -319,7 +329,8 @@ function sortTable(tableId, colIndex, thElement) {
   rows.forEach(row => tbody.appendChild(row));
   
   // Update sort state - toggle between asc and desc
-  sortState[key] = (newSort === 'asc') ? 'desc' : 'asc';
+  sortState[key] = newSort;
+  console.log('Sort complete');
 }
 
 </script>
