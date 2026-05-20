@@ -126,7 +126,21 @@ async function loadStats(){
 
     const totalComplete = progress.filter(p=>p.complete).length;
     const puzzleMap = {};
-    puzzles.forEach(p=>{puzzleMap[p.id]=p.title||p.id;});
+    const puzzleTotals = {};  // Store total answer cells per puzzle
+    puzzles.forEach(p=>{
+      puzzleMap[p.id]=p.title||p.id;
+      // Calculate total answer cells for this puzzle
+      if (p.data && p.data.cells && Array.isArray(p.data.cells)) {
+        let total = 0;
+        for (let r = 0; r < p.data.rows; r++) {
+          for (let c = 0; c < p.data.cols; c++) {
+            const cell = p.data.cells[r] && p.data.cells[r][c];
+            if (cell && cell.type === 'answer') total++;
+          }
+        }
+        puzzleTotals[p.id] = total;
+      }
+    });
 
     // User puzzle counts
     const userPuzzleCount = {};
@@ -171,15 +185,19 @@ async function loadStats(){
           try {
             const answers = typeof p.answers === 'string' ? JSON.parse(p.answers) : (p.answers || {});
             const filled = answers ? Object.keys(answers).length : 0;
-            if (filled > 0) {
-              progressStr = `${filled} letters entered`;
+            const total = puzzleTotals[p.puzzle_id] || 0;
+            if (total > 0) {
+              const pct = Math.round((filled / total) * 100);
+              progressStr = `${filled}/${total} (${pct}%)`;
+            } else if (filled > 0) {
+              progressStr = `${filled} letters`;
             }
           } catch (e) {
             console.error('Error parsing answers:', e);
             progressStr = '—';
           }
         } else {
-          progressStr = 'Complete';
+          progressStr = '100%';
         }
         
         const mins = p.time_spent_seconds ? Math.floor(p.time_spent_seconds/60)+'m '+((p.time_spent_seconds||0)%60)+'s' : '—';
