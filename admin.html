@@ -165,19 +165,25 @@ async function loadStats(){
         const userName=u?(u.display_name||u.email||'Unknown'):'Unknown';
         const badge=p.complete?'<span class="badge b-complete">✓ Complete</span>':'<span class="badge b-progress">⏳ In progress</span>';
         
-        // Calculate progress
+        // Calculate progress using answer_cell_count from puzzle
         let progressStr = '—';
         let pctStr = '—';
         if (!p.complete) {
           try {
             const answers = typeof p.answers === 'string' ? JSON.parse(p.answers) : (p.answers || {});
             const filled = answers ? Object.keys(answers).length : 0;
-            if (filled > 0) {
-              progressStr = filled;  // Just show number of letters filled
-              pctStr = '—';  // Can't calculate % without total
+            const puzData = puzzles.find(pz => pz.id === p.puzzle_id);
+            const total = puzData ? puzData.answer_cell_count : 0;
+            
+            if (total > 0) {
+              progressStr = `${filled}/${total}`;
+              const pct = Math.round((filled / total) * 100);
+              pctStr = `${pct}%`;
+            } else if (filled > 0) {
+              progressStr = `${filled} letters`;
             }
           } catch (e) {
-            console.error('Error parsing answers:', e);
+            console.error('Error calculating progress:', e);
           }
         } else {
           progressStr = '—';
