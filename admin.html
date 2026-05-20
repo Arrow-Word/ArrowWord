@@ -168,21 +168,27 @@ async function loadStats(){
         // Calculate progress
         let progressStr = '—';
         if (p.answers && !p.complete) {
-          const answers = typeof p.answers === 'string' ? JSON.parse(p.answers) : p.answers;
-          const filled = Object.keys(answers).length;
-          // Find puzzle data from puzzles array
-          const puzData = puzzles.find(pz => pz.id === p.puzzle_id);
-          if (puzData && puzData.data && puzData.data.cells) {
-            let total = 0;
-            for (let r = 0; r < puzData.data.rows; r++) {
-              for (let c = 0; c < puzData.data.cols; c++) {
-                if (puzData.data.cells[r][c].type === 'answer') total++;
+          try {
+            const answers = typeof p.answers === 'string' ? JSON.parse(p.answers) : p.answers;
+            const filled = Object.keys(answers).length;
+            // Find puzzle data from puzzles array
+            const puzData = puzzles.find(pz => pz.id === p.puzzle_id);
+            if (puzData && puzData.data && puzData.data.cells && Array.isArray(puzData.data.cells)) {
+              let total = 0;
+              for (let r = 0; r < puzData.data.rows; r++) {
+                for (let c = 0; c < puzData.data.cols; c++) {
+                  const cell = puzData.data.cells[r] && puzData.data.cells[r][c];
+                  if (cell && cell.type === 'answer') total++;
+                }
+              }
+              if (total > 0) {
+                const pct = Math.round((filled / total) * 100);
+                progressStr = `${filled} / ${total} (${pct}%)`;
               }
             }
-            if (total > 0) {
-              const pct = Math.round((filled / total) * 100);
-              progressStr = `${filled} / ${total} (${pct}%)`;
-            }
+          } catch (e) {
+            console.error('Error calculating progress:', e);
+            progressStr = '—';
           }
         } else if (p.complete) {
           progressStr = '100%';
