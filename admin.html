@@ -119,7 +119,7 @@ async function loadStats(){
     const [progress, users, puzzles, ratings, comments] = await Promise.all([
       sbAdminGetAllProgress(),
       sbAdminGetAllUsers(),
-      cloudGetIndex(),
+      cloudGetPuzzles(),  // Get full puzzle data, not just index
       sbAdminGetRatings().catch(()=>[]),
       sbAdminGetAllComments().catch(()=>[])
     ]);
