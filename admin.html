@@ -93,8 +93,8 @@ tr:hover td{background:#faf8ff}
 
 </div>
 
-<script src="supabase-auth.js?v=20260512"></script>
-<script src="cloud-storage.js?v=20260512"></script>
+<script src="supabase-auth.js?v=20260513"></script>
+<script src="cloud-storage.js?v=20260513"></script>
 <script>
 const ADMIN_PASSWORD = 'arrowword2024';
 
@@ -274,15 +274,17 @@ function sortTable(tableId, colIndex, thElement) {
   
   const key = tableId + '-' + colIndex;
   const currentSort = sortState[key] || 'none';
-  const newSort = currentSort === 'asc' ? 'desc' : 'asc';
+  const newSort = currentSort === 'asc' ? 'desc' : currentSort === 'desc' ? 'asc' : 'asc';
   
-  // Clear previous sort indicators
+  // Clear previous sort indicators from all headers in this table
   table.querySelectorAll('th').forEach(h => {
     h.classList.remove('sort-asc', 'sort-desc');
   });
   
   // Add sort indicator to current column
-  thElement.classList.add('sort-' + newSort);
+  if (newSort !== 'none') {
+    thElement.classList.add('sort-' + newSort);
+  }
   
   // Sort rows
   rows.sort((a, b) => {
@@ -292,13 +294,11 @@ function sortTable(tableId, colIndex, thElement) {
     let aVal = aCell.textContent.trim();
     let bVal = bCell.textContent.trim();
     
-    // Try to parse as date (en-ZA format: DD/MM/YYYY)
-    const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+    // Try to parse as date (YYYY/MM/DD format)
+    const dateRegex = /^\d{4}\/\d{1,2}\/\d{1,2}$/;
     if (dateRegex.test(aVal) && dateRegex.test(bVal)) {
-      const aParts = aVal.split('/');
-      const bParts = bVal.split('/');
-      const aDate = new Date(aParts[2], aParts[1] - 1, aParts[0]).getTime();
-      const bDate = new Date(bParts[2], bParts[1] - 1, bParts[0]).getTime();
+      const aDate = new Date(aVal).getTime();
+      const bDate = new Date(bVal).getTime();
       return newSort === 'asc' ? aDate - bDate : bDate - aDate;
     }
     
@@ -318,8 +318,8 @@ function sortTable(tableId, colIndex, thElement) {
   // Re-append sorted rows
   rows.forEach(row => tbody.appendChild(row));
   
-  // Update sort state
-  sortState[key] = newSort;
+  // Update sort state - toggle between asc and desc
+  sortState[key] = (newSort === 'asc') ? 'desc' : 'asc';
 }
 
 </script>
