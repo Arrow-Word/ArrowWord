@@ -26,7 +26,10 @@ nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:cen
 .stat-label{font-size:12px;color:#888;margin-top:4px}
 h2{font-size:18px;font-weight:700;color:#443366;margin-bottom:12px;margin-top:8px}
 table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e0d8f0;margin-bottom:28px;font-size:13px}
-th{background:#7744bb;color:#fff;padding:10px 14px;text-align:left;font-size:13px}
+th{background:#7744bb;color:#fff;padding:10px 14px;text-align:left;font-size:13px;cursor:pointer;user-select:none}
+th:hover{background:#664299}
+th.sort-asc::after{content:' ▲';font-size:10px}
+th.sort-desc::after{content:' ▼';font-size:10px}
 td{padding:10px 14px;border-bottom:1px solid #f0ecff}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#faf8ff}
@@ -90,8 +93,8 @@ tr:hover td{background:#faf8ff}
 
 </div>
 
-<script src="supabase-auth.js?v=20260510"></script>
-<script src="cloud-storage.js?v=20260510"></script>
+<script src="supabase-auth.js?v=20260511"></script>
+<script src="cloud-storage.js?v=20260511"></script>
 <script>
 const ADMIN_PASSWORD = 'arrowword2024';
 
@@ -241,6 +244,72 @@ async function loadStats(){
   } catch(e) {
     document.getElementById('stats-row').innerHTML=`<div style="color:#c00;padding:12px">Error loading stats: ${e.message}</div>`;
   }
+  
+  // Add sorting to tables
+  setupTableSorting('users-table');
+  setupTableSorting('activity-table');
+  setupTableSorting('ratings-table');
+  setupTableSorting('comments-table');
+}
+
+// Sorting functionality
+let sortState = {};
+
+function setupTableSorting(tableId) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  
+  const headers = table.querySelectorAll('th');
+  headers.forEach((th, colIndex) => {
+    th.onclick = () => sortTable(tableId, colIndex, th);
+  });
+}
+
+function sortTable(tableId, colIndex, thElement) {
+  const table = document.getElementById(tableId);
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr:not(.loading)'));
+  
+  if (!rows.length) return;
+  
+  const key = tableId + '-' + colIndex;
+  const currentSort = sortState[key] || 'none';
+  const newSort = currentSort === 'asc' ? 'desc' : 'asc';
+  
+  // Clear previous sort indicators
+  table.querySelectorAll('th').forEach(h => {
+    h.classList.remove('sort-asc', 'sort-desc');
+  });
+  
+  // Add sort indicator to current column
+  thElement.classList.add('sort-' + newSort);
+  
+  // Sort rows
+  rows.sort((a, b) => {
+    const aCell = a.cells[colIndex];
+    const bCell = b.cells[colIndex];
+    
+    let aVal = aCell.textContent.trim();
+    let bVal = bCell.textContent.trim();
+    
+    // Try to parse as number if both look like numbers
+    const aNum = parseFloat(aVal);
+    const bNum = parseFloat(bVal);
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return newSort === 'asc' ? aNum - bNum : bNum - aNum;
+    }
+    
+    // String comparison
+    return newSort === 'asc' 
+      ? aVal.localeCompare(bVal)
+      : bVal.localeCompare(aVal);
+  });
+  
+  // Re-append sorted rows
+  rows.forEach(row => tbody.appendChild(row));
+  
+  // Update sort state
+  sortState[key] = newSort;
 }
 
 </script>
