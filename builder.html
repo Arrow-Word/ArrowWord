@@ -185,7 +185,7 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
     
   </div>
 </nav>
-<script src="cloud-storage.js?v=20260509"></script>
+<script src="cloud-storage.js?v=20260508"></script>
 <script>
 const BUILDER_PASSWORD = 'arrowword2024';
 const BUILDER_UNLOCK_KEY = 'builder_unlocked_v20';
@@ -472,14 +472,14 @@ function arrowSVG(dir, s) {
     left:     [`M${e},${c} L${m},${c}`,          head(m,c,-1,0)],
     down:     [`M${c},${m} L${c},${e}`,          head(c,e,0,1)],
     up:       [`M${c},${e} L${c},${m}`,          head(c,m,0,-1)],
-    'right-down': [`M${m},${c} L${c},${c} L${e},${c} L${e},${e}`, head(e,e,1,1)],
-    'down-right': [`M${c},${m} L${c},${c} L${c},${e} L${e},${e}`, head(e,e,1,1)],
-    'left-down':  [`M${e},${c} L${c},${c} L${c},${e} L${m},${e}`, head(m,e,-1,1)],
-    'down-left':  [`M${c},${m} L${c},${c} L${c},${e} L${m},${e}`, head(m,e,-1,1)],
-    'right-up':   [`M${m},${c} L${c},${c} L${c},${m} L${e},${m}`, head(e,m,1,-1)],
-    'up-right':   [`M${c},${e} L${c},${c} L${c},${m} L${e},${m}`, head(e,m,1,-1)],
-    'left-up':    [`M${e},${c} L${c},${c} L${c},${m} L${m},${m}`, head(m,m,-1,-1)],
-    'up-left':    [`M${c},${e} L${c},${c} L${c},${m} L${m},${m}`, head(m,m,-1,-1)],
+    'right-down': [`M${m},${c} L${c},${c} L${c},${e}`, head(c,e,0,1)],
+    'down-right': [`M${c},${m} L${c},${c} L${e},${c}`, head(e,c,1,0)],
+    'left-down':  [`M${e},${c} L${c},${c} L${c},${e}`, head(c,e,0,1)],
+    'down-left':  [`M${c},${m} L${c},${c} L${m},${c}`, head(m,c,-1,0)],
+    'right-up':   [`M${m},${c} L${c},${c} L${c},${m}`, head(c,m,0,-1)],
+    'up-right':   [`M${c},${e} L${c},${c} L${e},${c}`, head(e,c,1,0)],
+    'left-up':    [`M${e},${c} L${c},${c} L${c},${m}`, head(c,m,0,-1)],
+    'up-left':    [`M${c},${e} L${c},${c} L${m},${c}`, head(m,c,-1,0)],
   };
   const [p,a]=paths[dir]||paths.right;
   return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg"><path d="${p}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${a}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
