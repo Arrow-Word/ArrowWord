@@ -93,8 +93,8 @@ tr:hover td{background:#faf8ff}
 
 </div>
 
-<script src="supabase-auth.js?v=20260511"></script>
-<script src="cloud-storage.js?v=20260511"></script>
+<script src="supabase-auth.js?v=20260512"></script>
+<script src="cloud-storage.js?v=20260512"></script>
 <script>
 const ADMIN_PASSWORD = 'arrowword2024';
 
@@ -291,6 +291,16 @@ function sortTable(tableId, colIndex, thElement) {
     
     let aVal = aCell.textContent.trim();
     let bVal = bCell.textContent.trim();
+    
+    // Try to parse as date (en-ZA format: DD/MM/YYYY)
+    const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+    if (dateRegex.test(aVal) && dateRegex.test(bVal)) {
+      const aParts = aVal.split('/');
+      const bParts = bVal.split('/');
+      const aDate = new Date(aParts[2], aParts[1] - 1, aParts[0]).getTime();
+      const bDate = new Date(bParts[2], bParts[1] - 1, bParts[0]).getTime();
+      return newSort === 'asc' ? aDate - bDate : bDate - aDate;
+    }
     
     // Try to parse as number if both look like numbers
     const aNum = parseFloat(aVal);
