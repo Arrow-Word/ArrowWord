@@ -37,13 +37,13 @@ async function cloudGetPuzzle(id) {
   const data = await _sbGet(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id) + '&select=*');
   if (!data || !data.length) return null;
   const p = data[0];
-  return { id: p.id, title: p.title, publishedAt: p.published_at, publishedAtMs: p.published_at_ms, rows: p.rows, cols: p.cols, data: p.data };
+  return { id: p.id, title: p.title, publishedAt: p.published_at, publishedAtMs: p.published_at_ms, rows: p.rows, cols: p.cols, data: p.data, answer_cell_count: p.answer_cell_count };
 }
 
 // All puzzles with full data
 async function cloudGetPuzzles() {
   const data = await _sbGet(SB_PUZZLES + '?select=*&order=published_at_ms.desc');
-  return (data || []).map(p => ({ id: p.id, title: p.title, publishedAt: p.published_at, publishedAtMs: p.published_at_ms, rows: p.rows, cols: p.cols, data: p.data }));
+  return (data || []).map(p => ({ id: p.id, title: p.title, publishedAt: p.published_at, publishedAtMs: p.published_at_ms, rows: p.rows, cols: p.cols, data: p.data, answer_cell_count: p.answer_cell_count }));
 }
 
 async function cloudPublishPuzzle(title, data) {
