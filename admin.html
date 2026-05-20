@@ -170,7 +170,8 @@ async function loadStats(){
         if (p.answers && !p.complete) {
           const answers = typeof p.answers === 'string' ? JSON.parse(p.answers) : p.answers;
           const filled = Object.keys(answers).length;
-          const puzData = sCurPuzzle && sCurPuzzle.id === p.puzzle_id ? sCurPuzzle : null;
+          // Find puzzle data from puzzles array
+          const puzData = puzzles.find(pz => pz.id === p.puzzle_id);
           if (puzData && puzData.data && puzData.data.cells) {
             let total = 0;
             for (let r = 0; r < puzData.data.rows; r++) {
