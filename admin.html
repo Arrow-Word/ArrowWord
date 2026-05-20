@@ -66,8 +66,8 @@ tr:hover td{background:#faf8ff}
   </table>
   <h2>📊 Puzzle activity</h2>
   <table id="activity-table">
-    <thead><tr><th>User</th><th>Puzzle</th><th>Status</th><th>Progress</th><th>Time spent</th><th>Rating</th><th>Checks used</th><th>Last saved</th></tr></thead>
-    <tbody><tr><td colspan="8" class="loading">Loading…</td></tr></tbody>
+    <thead><tr><th>User</th><th>Puzzle</th><th>Status</th><th>Progress</th><th>%</th><th>Time spent</th><th>Rating</th><th>Checks used</th><th>Last saved</th></tr></thead>
+    <tbody><tr><td colspan="9" class="loading">Loading…</td></tr></tbody>
   </table>
 
   <h2>⭐ Puzzle ratings</h2>
@@ -130,15 +130,22 @@ async function loadStats(){
     puzzles.forEach(p=>{
       puzzleMap[p.id]=p.title||p.id;
       // Calculate total answer cells for this puzzle
-      if (p.data && p.data.cells && Array.isArray(p.data.cells)) {
-        let total = 0;
-        for (let r = 0; r < p.data.rows; r++) {
-          for (let c = 0; c < p.data.cols; c++) {
-            const cell = p.data.cells[r] && p.data.cells[r][c];
-            if (cell && cell.type === 'answer') total++;
+      try {
+        if (p.data && typeof p.data === 'object') {
+          const puzData = typeof p.data === 'string' ? JSON.parse(p.data) : p.data;
+          if (puzData && puzData.cells && Array.isArray(puzData.cells)) {
+            let total = 0;
+            for (let r = 0; r < puzData.cells.length; r++) {
+              for (let c = 0; c < puzData.cells[r].length; c++) {
+                const cell = puzData.cells[r][c];
+                if (cell && cell.type === 'answer') total++;
+              }
+            }
+            if (total > 0) puzzleTotals[p.id] = total;
           }
         }
-        puzzleTotals[p.id] = total;
+      } catch (e) {
+        console.error('Error calculating totals for puzzle ' + p.id, e);
       }
     });
 
@@ -181,23 +188,23 @@ async function loadStats(){
         
         // Calculate progress
         let progressStr = '—';
+        let pctStr = '—';
         if (!p.complete) {
           try {
             const answers = typeof p.answers === 'string' ? JSON.parse(p.answers) : (p.answers || {});
             const filled = answers ? Object.keys(answers).length : 0;
             const total = puzzleTotals[p.puzzle_id] || 0;
             if (total > 0) {
+              progressStr = `${filled}/${total}`;
               const pct = Math.round((filled / total) * 100);
-              progressStr = `${filled}/${total} (${pct}%)`;
-            } else if (filled > 0) {
-              progressStr = `${filled} letters`;
+              pctStr = `${pct}%`;
             }
           } catch (e) {
             console.error('Error parsing answers:', e);
-            progressStr = '—';
           }
         } else {
-          progressStr = '100%';
+          progressStr = 'Complete';
+          pctStr = '100%';
         }
         
         const mins = p.time_spent_seconds ? Math.floor(p.time_spent_seconds/60)+'m '+((p.time_spent_seconds||0)%60)+'s' : '—';
@@ -207,6 +214,7 @@ async function loadStats(){
           <td>${puzzleMap[p.puzzle_id]||p.puzzle_id}</td>
           <td>${badge}</td>
           <td>${progressStr}</td>
+          <td>${pctStr}</td>
           <td>${mins}</td>
           <td style="color:#f0a500">${stars}</td>
           <td>${p.check_count||0}</td>
