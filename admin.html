@@ -126,35 +126,7 @@ async function loadStats(){
 
     const totalComplete = progress.filter(p=>p.complete).length;
     const puzzleMap = {};
-    const puzzleTotals = {};  // Store total answer cells per puzzle
-    puzzles.forEach(p=>{
-      puzzleMap[p.id]=p.title||p.id;
-      // Calculate total answer cells for this puzzle
-      try {
-        let puzData = p.data;
-        // Parse if it's a string
-        if (typeof puzData === 'string') {
-          puzData = JSON.parse(puzData);
-        }
-        // Count answer cells
-        if (puzData && puzData.cells) {
-          let total = 0;
-          const cells = puzData.cells;
-          for (let r = 0; r < cells.length; r++) {
-            const row = cells[r];
-            for (let c = 0; c < row.length; c++) {
-              if (row[c] && row[c].type === 'answer') total++;
-            }
-          }
-          if (total > 0) {
-            puzzleTotals[p.id] = total;
-            console.log('Puzzle ' + p.id + ' has ' + total + ' answer cells');
-          }
-        }
-      } catch (e) {
-        console.error('Error processing puzzle ' + p.id + ':', e);
-      }
-    });
+    puzzles.forEach(p=>{puzzleMap[p.id]=p.title||p.id;});
 
     // User puzzle counts
     const userPuzzleCount = {};
@@ -200,17 +172,15 @@ async function loadStats(){
           try {
             const answers = typeof p.answers === 'string' ? JSON.parse(p.answers) : (p.answers || {});
             const filled = answers ? Object.keys(answers).length : 0;
-            const total = puzzleTotals[p.puzzle_id] || 0;
-            if (total > 0) {
-              progressStr = `${filled}/${total}`;
-              const pct = Math.round((filled / total) * 100);
-              pctStr = `${pct}%`;
+            if (filled > 0) {
+              progressStr = filled;  // Just show number of letters filled
+              pctStr = '—';  // Can't calculate % without total
             }
           } catch (e) {
             console.error('Error parsing answers:', e);
           }
         } else {
-          progressStr = 'Complete';
+          progressStr = '—';
           pctStr = '100%';
         }
         
