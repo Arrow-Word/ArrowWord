@@ -473,14 +473,14 @@ function arrowSVG(dir, s) {
     left:     [`M${e},${c} L${m},${c}`,          head(m,c,-1,0,'large')],
     down:     [`M${c},${m} L${c},${e}`,          head(c,e,0,1,'large')],
     up:       [`M${c},${e} L${c},${m}`,          head(c,m,0,-1,'large')],
-    'right-down': [`M${m},${c} L${c},${c} L${c},${e}`, head(c,e,0,1,'small')],
-    'down-right': [`M${c},${m} L${c},${c} L${e},${c}`, head(e,c,1,0,'small')],
-    'left-down':  [`M${e},${c} L${c},${c} L${c},${e}`, head(c,e,0,1,'small')],
-    'down-left':  [`M${c},${m} L${c},${c} L${m},${c}`, head(m,c,-1,0,'small')],
-    'right-up':   [`M${m},${c} L${c},${c} L${c},${m}`, head(c,m,0,-1,'small')],
-    'up-right':   [`M${c},${e} L${c},${c} L${e},${c}`, head(e,c,1,0,'small')],
-    'left-up':    [`M${e},${c} L${c},${c} L${c},${m}`, head(c,m,0,-1,'small')],
-    'up-left':    [`M${c},${e} L${c},${c} L${m},${c}`, head(m,c,-1,0,'small')],
+    'right-down': [`M${m},${c} L${c},${c} L${c},${1.2*e-0.2*c}`, head(c,1.2*e-0.2*c,0,1,'small')],
+    'down-right': [`M${c},${m} L${c},${c} L${1.2*e-0.2*c},${c}`, head(1.2*e-0.2*c,c,1,0,'small')],
+    'left-down':  [`M${e},${c} L${c},${c} L${c},${1.2*e-0.2*c}`, head(c,1.2*e-0.2*c,0,1,'small')],
+    'down-left':  [`M${c},${m} L${c},${c} L${1.2*m-0.2*c},${c}`, head(1.2*m-0.2*c,c,-1,0,'small')],
+    'right-up':   [`M${m},${c} L${c},${c} L${c},${1.2*m-0.2*c}`, head(c,1.2*m-0.2*c,0,-1,'small')],
+    'up-right':   [`M${c},${e} L${c},${c} L${1.2*e-0.2*c},${c}`, head(1.2*e-0.2*c,c,1,0,'small')],
+    'left-up':    [`M${e},${c} L${c},${c} L${c},${1.2*m-0.2*c}`, head(c,1.2*m-0.2*c,0,-1,'small')],
+    'up-left':    [`M${c},${e} L${c},${c} L${1.2*m-0.2*c},${c}`, head(1.2*m-0.2*c,c,-1,0,'small')],
   };
   const [p,a]=paths[dir]||paths.right;
   return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg"><path d="${p}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${a}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -1525,7 +1525,7 @@ function buildSolverHTML(data,title){
   function eSVG(dir,s){
     const c=s/2,m=Math.ceil(s*0.12),e=s-m,sw=Math.max(1.6,s/12),ahLarge=s*0.34,ahSmall=s*0.25;
     function head(x,y,dx,dy,size='large'){const ah=size==='small'?ahSmall:ahLarge;const l=Math.sqrt(dx*dx+dy*dy),nx=dx/l,ny=dy/l,px=-ny,py=nx;return`M${x-nx*ah+px*ah*0.45},${y-ny*ah+py*ah*0.45} L${x},${y} L${x-nx*ah-px*ah*0.45},${y-ny*ah-py*ah*0.45}`;}
-    const paths={right:[`M${m},${c} L${e},${c}`,head(e,c,1,0,'large')],left:[`M${e},${c} L${m},${c}`,head(m,c,-1,0,'large')],down:[`M${c},${m} L${c},${e}`,head(c,e,0,1,'large')],up:[`M${c},${e} L${c},${m}`,head(c,m,0,-1,'large')],'right-down':[`M${m},${c} L${c},${c} L${c},${e}`,head(c,e,0,1,'small')],'down-right':[`M${c},${m} L${c},${c} L${e},${c}`,head(e,c,1,0,'small')],'left-down':[`M${e},${c} L${c},${c} L${c},${e}`,head(c,e,0,1,'small')],'down-left':[`M${c},${m} L${c},${c} L${m},${c}`,head(m,c,-1,0,'small')],'right-up':[`M${m},${c} L${c},${c} L${c},${m}`,head(c,m,0,-1,'small')],'up-right':[`M${c},${e} L${c},${c} L${e},${c}`,head(e,c,1,0,'small')],'left-up':[`M${e},${c} L${c},${c} L${c},${m}`,head(c,m,0,-1,'small')],'up-left':[`M${c},${e} L${c},${c} L${m},${c}`,head(m,c,-1,0,'small')]};
+    const paths={right:[`M${m},${c} L${e},${c}`,head(e,c,1,0,'large')],left:[`M${e},${c} L${m},${c}`,head(m,c,-1,0,'large')],down:[`M${c},${m} L${c},${e}`,head(c,e,0,1,'large')],up:[`M${c},${e} L${c},${m}`,head(c,m,0,-1,'large')],'right-down':[`M${m},${c} L${c},${c} L${c},${1.2*e-0.2*c}`,head(c,1.2*e-0.2*c,0,1,'small')],'down-right':[`M${c},${m} L${c},${c} L${1.2*e-0.2*c},${c}`,head(1.2*e-0.2*c,c,1,0,'small')],'left-down':[`M${e},${c} L${c},${c} L${c},${1.2*e-0.2*c}`,head(c,1.2*e-0.2*c,0,1,'small')],'down-left':[`M${c},${m} L${c},${c} L${1.2*m-0.2*c},${c}`,head(1.2*m-0.2*c,c,-1,0,'small')],'right-up':[`M${m},${c} L${c},${c} L${c},${1.2*m-0.2*c}`,head(c,1.2*m-0.2*c,0,-1,'small')],'up-right':[`M${c},${e} L${c},${c} L${1.2*e-0.2*c},${c}`,head(1.2*e-0.2*c,c,1,0,'small')],'left-up':[`M${e},${c} L${c},${c} L${c},${1.2*m-0.2*c}`,head(c,1.2*m-0.2*c,0,-1,'small')],'up-left':[`M${c},${e} L${c},${c} L${1.2*m-0.2*c},${c}`,head(1.2*m-0.2*c,c,-1,0,'small')]};
     const[p,a]=paths[dir]||paths.right;
     return`<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg"><path d="${p}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${a}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   }
