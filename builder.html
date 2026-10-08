@@ -8,12 +8,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
-<title>Puzzle Builder v19 — Arrow Word Puzzles</title>
+<title>Puzzle Builder v24 — Arrow Word Puzzles</title>
 <!-- Arrow Word Puzzle Builder
      ════════════════════════════════════════════════
-     CURRENT VERSION: v20
+     CURRENT VERSION: v24
      ════════════════════════════════════════════════
      CHANGELOG:
+     v24 - Added Publish to the Web beside Quicksave on the Design Grid tab.
+     v23 - Applied clue-text box shares consistently in print and exported
+           puzzles; verified per-clue font sizes survive local save/reload.
+     v22 - Fixed clue-box flex sizing: longer clues receive more of the cell,
+           independent of font size, so auto-fit never shrinks their boxes.
+     v21 - Added a clue-box fit checker with automatic font fitting,
+           manual font sizing, and skip-and-continue review.
      v17 - Fixed cloud storage (JSONBin) not visible cross-device/browser.
            Directory default sort changed to A-Z.
            Check Answers now clears selection highlight after checking.
@@ -76,8 +83,8 @@ td.t-clue:hover{background:#ddd0ee}
 td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:middle}
 /* clue cell layout */
 .clue-inner{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
-/* each slot's flex-grow is set inline based on its text size so smaller-text
-   clues take less room and dividers re-flow automatically */
+/* Each slot's flex-grow is based on clue length, not font size. Changing a
+   clue's font therefore never takes space away from that clue's own box. */
 .clue-slot{display:flex;flex:1 1 0;min-height:0;overflow:hidden;padding:1px 2px;position:relative;align-items:center;justify-content:center}
 /* arrow RIGHT of text (default) */
 .clue-slot.ap-right{flex-direction:row;align-items:center;justify-content:center}
@@ -98,6 +105,7 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
 .slot-arrow{flex-shrink:0;display:block;line-height:0}
 .slot-arrow svg{display:block}
 .clue-divider{height:1px;background:#9966cc;opacity:0.6;flex-shrink:0;margin:0 2px}
+.fit-check-target{outline:3px solid #d43b55!important;outline-offset:1px;z-index:3}
 .ans-letter{font-weight:600;color:#222;line-height:1}
 .solve-input{width:100%;height:100%;border:none;background:transparent;text-align:center;font-weight:600;color:#222;outline:none;text-transform:uppercase;display:block;cursor:text}
 .ans-letter,.solve-input{position:relative;z-index:1}
@@ -141,6 +149,8 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
 .dir-option span{font-size:9px;color:#554488;font-weight:600;text-align:center;line-height:1.1;white-space:pre-line}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
 .warn{font-size:11px;color:#c00;min-height:16px;margin-top:3px;font-weight:500}
+.fit-check-clue{padding:10px;background:#f5f0ff;border:1px solid #ddd0ff;border-radius:6px;color:#443366;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
+.fit-check-status{min-height:18px;color:#9b293a;font-size:12px;line-height:1.4;margin-top:8px}
 /* save/load */
 .save-section{background:#fff;border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:16px}
 .save-section h3{font-size:13px;font-weight:600;margin-bottom:8px;color:#444}
@@ -217,7 +227,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-    title="Click for change history">v20 ▾</button>
+    title="Click for change history">v24 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
@@ -256,6 +266,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
     <button class="tool-btn" id="btn-erase" onclick="setTool('erase')">Erase cell</button>
     <span style="color:#aaa">|</span>
     <button class="tool-btn green" onclick="openQuickTest()" title="Try the puzzle without leaving the design view">▶ Quick test</button>
+    <button class="tool-btn" onclick="startClueFitCheck()" title="Find clue text that overflows its box">🔎 Check clue fit</button>
     <span style="color:#aaa">|</span>
     <label style="font-size:12px">Cell size:
       <input type="range" id="cell-size" min="44" max="120" value="64" oninput="updateCellSize(this.value)" style="width:80px;vertical-align:middle">
@@ -267,7 +278,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
     </label>
   </div>
   <div class="info">
-    <strong>Add / edit clue:</strong> Click any empty or clue cell. In a clue cell you can add clues, edit existing ones, reorder them, or change per-clue text size. Clues with smaller text now take less room — leaving more space for other clues in the same cell.<br>
+    <strong>Add / edit clue:</strong> Click any empty or clue cell. In a clue cell you can add clues, edit existing ones, reorder them, or change per-clue text size. Longer clues receive a larger share of their cell; changing font size does not resize the clue box. Use <strong>Check clue fit</strong> to review any text that overflows its box.<br>
     <strong>Black cell / Erase:</strong> Will confirm before deleting clues. To start a fresh puzzle (change grid size), go to the <strong>4. New Puzzle</strong> tab.
   </div>
   <div id="draft-banner" class="no-print" style="display:none;background:#e0f0ff;border:1px solid #99c0e0;color:#224466;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:13px;align-items:center;gap:10px;flex-wrap:wrap">
@@ -275,10 +286,12 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
     <button onclick="restoreDraft()" style="background:#1a6e1a;color:#fff;border:none;border-radius:4px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600">Restore draft</button>
     <button onclick="discardDraft()" style="background:#fff;border:1px solid #b88;color:#7a3030;border-radius:4px;padding:5px 12px;cursor:pointer;font-size:12px">Discard</button>
   </div>
-  <!-- v14: green Quicksave button below the autosave area for one-tap saves
-       to the saved-puzzles library, so Mum doesn't have to switch tabs. -->
+  <!-- Quick local save and web-directory publish are grouped here for easy access. -->
   <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
-    <button class="tool-btn green" onclick="quickSavePuzzle()" style="font-size:13px;padding:8px 14px">💾 Quicksave puzzle</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="tool-btn green" onclick="quickSavePuzzle()" style="font-size:13px;padding:8px 14px">💾 Quicksave puzzle</button>
+      <button class="tool-btn" onclick="publishToWeb()" title="Publish the current edited puzzle to the public web directory" style="background:#ede0ff;color:#443366;border-color:#9966cc;font-weight:600;font-size:13px;padding:8px 14px">🌐 Publish to the Web</button>
+    </div>
     <span id="autosave-indicator" style="font-size:11px;color:#999;text-align:right">Auto-save: ready</span>
   </div>
   <div class="toolbar no-print" style="gap:6px;margin-bottom:6px">
@@ -420,6 +433,36 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
       <button class="tool-btn" onclick="qtReveal()">Reveal answers</button>
       <button class="tool-btn" onclick="qtClear()">Clear</button>
       <button class="tool-btn active" onclick="closeQuickTest()">Close (discard)</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLUE TEXT FIT CHECKER -->
+<div class="modal-bg" id="clue-fit-modal">
+  <div class="modal" style="width:500px">
+    <h3 id="fit-check-title">Check clue text fit</h3>
+    <div id="fit-check-detail">
+      <p id="fit-check-location"></p>
+      <div id="fit-check-clue" class="fit-check-clue"></div>
+      <p id="fit-check-size" style="margin-top:9px"></p>
+      <div class="field" style="display:flex;align-items:center;gap:8px;margin:12px 0 0">
+        <label for="fit-check-size-input" style="margin:0">Your font size:</label>
+        <input id="fit-check-size-input" type="number" min="4" max="20" step="0.5" style="width:82px;padding:5px 7px;font-size:13px;border:1px solid #bbb;border-radius:5px">
+        <span style="font-size:12px;color:#777">px</span>
+      </div>
+      <div id="fit-check-status" class="fit-check-status"></div>
+      <div class="modal-btns" style="justify-content:flex-start">
+        <button class="tool-btn green" id="fit-check-auto" onclick="autoFitCurrentClue()">Auto-fit &amp; next</button>
+        <button class="tool-btn active" onclick="applyManualClueFit()">Apply size</button>
+        <button class="tool-btn" onclick="skipCurrentClueFit()">Ignore &amp; next</button>
+      </div>
+    </div>
+    <div id="fit-check-finished" style="display:none">
+      <p id="fit-check-summary"></p>
+    </div>
+    <div class="modal-btns">
+      <button class="tool-btn" id="fit-check-stop" onclick="closeClueFitCheck()">Stop checking</button>
+      <button class="tool-btn active" id="fit-check-done" style="display:none" onclick="closeClueFitCheck()">Done</button>
     </div>
   </div>
 </div>
@@ -600,13 +643,18 @@ function firstAnswerTarget(dir,or,oc){
   return {r:or+dr,c:oc+dc,edge};
 }
 
+function clueBoxWeight(cl){
+  const length=Math.max(1,String(cl&&cl.clue||'?').trim().length);
+  return Math.sqrt(length);
+}
+
 function getAnswerArrowMarkers(r,c,grid=G,baseTextPx=textSizePx){
   const markers=[];
   for(let or=0;or<grid.length;or++){
     for(let oc=0;oc<(grid[or]||[]).length;oc++){
       const owner=grid[or][oc];
       if(owner.t!=='clue'||!Array.isArray(owner.clues)||!owner.clues.length)continue;
-      const weights=owner.clues.map(cl=>cl.textSize&&cl.textSize>0?cl.textSize:baseTextPx);
+      const weights=owner.clues.map(clueBoxWeight);
       const total=weights.reduce((sum,value)=>sum+value,0)||owner.clues.length;
       let consumed=0;
       owner.clues.forEach((cl,index)=>{
@@ -639,6 +687,7 @@ let R=9,C=9,G=[],tool='clue',er=-1,ec=-1;
 let cellSizePx=64, textSizePx=12;
 let editingClueIdx=-1;
 let activeWord=null; // {key, cells:[[r,c],...], answer, idx}
+let clueFitSession=null;
 
 function fresh(){return{t:'empty',clues:[],answerOf:null};}
 
@@ -718,8 +767,9 @@ function makeTd(r,c,solve){
       const slot=document.createElement('div');
       slot.className='clue-slot';
       const fs=cl.textSize&&cl.textSize>0?cl.textSize:textSizePx;
-      // FIX 1: flex-grow proportional to font size — smaller clues take less room
-      slot.style.flex=fs+' 1 0';
+      // Give longer clue text a larger share of the cell. Keep this independent
+      // of fs so auto-fitting its font cannot make its own box smaller.
+      slot.style.flex=clueBoxWeight(cl)+' 1 0';
       const txtDiv=document.createElement('div');txtDiv.className='slot-text';
       txtDiv.style.fontSize=fs+'px';
       txtDiv.textContent=cl.clue||'?';
@@ -855,10 +905,11 @@ function printPuzzle(){
           const gap=clues.length>1?0.6:0;
           const usableHeight=printCellSize-gap*(clues.length-1);
           const sizes=clues.map(cl=>cl.textSize&&cl.textSize>0?cl.textSize:textSizePx);
-          const totalSize=sizes.reduce((sum,size)=>sum+size,0)||clues.length;
+          const weights=clues.map(clueBoxWeight);
+          const totalWeight=weights.reduce((sum,weight)=>sum+weight,0)||clues.length;
           let slotY=y;
           clues.forEach((cl,index)=>{
-            const slotHeight=usableHeight*(sizes[index]/totalSize);
+            const slotHeight=usableHeight*(weights[index]/totalWeight);
             if(index>0){
               svg.appendChild(svgNode('line',{
                 x1:x+2,y1:slotY+gap/2,x2:x+printCellSize-2,y2:slotY+gap/2,
@@ -1101,6 +1152,208 @@ function deleteClue(i){
 }
 
 function closeModal(){document.getElementById('modal').classList.remove('open');editingClueIdx=-1;}
+
+// ── Clue-box fit checker ─────────────────────────────────────────────────────
+function clueFitKey(r,c,i){return r+':'+c+':'+i;}
+
+function clueFitSlot(r,c,i){
+  const td=document.querySelector('#dgrid td[data-r="'+r+'"][data-c="'+c+'"]');
+  return td?td.querySelectorAll('.clue-slot')[i]||null:null;
+}
+
+// Measure the text at its current font size and at the exact width/height of
+// its rendered clue box. The offscreen copy is allowed to grow, so clipped
+// text remains measurable even though the real clue slot uses overflow:hidden.
+function clueTextFits(slot){
+  if(!slot)return true;
+  const txt=slot.querySelector('.slot-text');
+  if(!txt)return true;
+  const width=txt.clientWidth,height=txt.clientHeight;
+  if(width<=0||height<=0)return true;
+  const cs=getComputedStyle(txt);
+  const probe=document.createElement('div');
+  probe.textContent=txt.textContent;
+  Object.assign(probe.style,{
+    position:'fixed',left:'-100000px',top:'0',visibility:'hidden',
+    display:'block',boxSizing:'content-box',width:width+'px',height:'auto',
+    minWidth:'0',maxWidth:'none',minHeight:'0',maxHeight:'none',
+    margin:'0',padding:'0',border:'0',overflow:'visible',
+    fontFamily:cs.fontFamily,fontSize:cs.fontSize,fontWeight:cs.fontWeight,
+    fontStyle:cs.fontStyle,lineHeight:cs.lineHeight,letterSpacing:cs.letterSpacing,
+    wordSpacing:cs.wordSpacing,whiteSpace:'normal',
+    overflowWrap:cs.overflowWrap,wordBreak:cs.wordBreak
+  });
+  document.body.appendChild(probe);
+  const fits=probe.scrollWidth<=width+1&&probe.scrollHeight<=height+1;
+  probe.remove();
+  return fits;
+}
+
+function collectClueFitIssues(){
+  const issues=[];
+  let total=0;
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const cell=G[r][c];
+    if(!cell||cell.t!=='clue')continue;
+    cell.clues.forEach((cl,i)=>{
+      total++;
+      const slot=clueFitSlot(r,c,i);
+      if(slot&&!clueTextFits(slot))issues.push({r,c,i,cl,key:clueFitKey(r,c,i)});
+    });
+  }
+  return{issues,total};
+}
+
+function setClueFitTarget(issue,scroll){
+  document.querySelectorAll('#dgrid .fit-check-target').forEach(el=>el.classList.remove('fit-check-target'));
+  if(!issue)return;
+  const td=document.querySelector('#dgrid td[data-r="'+issue.r+'"][data-c="'+issue.c+'"]');
+  if(td){
+    td.classList.add('fit-check-target');
+    if(scroll)td.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});
+  }
+}
+
+function startClueFitCheck(){
+  const found=collectClueFitIssues();
+  clueFitSession={handled:new Set(),ignored:new Set(),adjusted:new Set(),total:found.total,current:null,autoFailed:false};
+  document.getElementById('clue-fit-modal').classList.add('open');
+  if(!found.issues.length){
+    finishClueFitCheck();
+    return;
+  }
+  showNextClueFitIssue();
+}
+
+function showNextClueFitIssue(){
+  if(!clueFitSession)return;
+  const found=collectClueFitIssues();
+  // A custom size can change the flex share available to other clues in the
+  // same cell. Revisit any previously corrected clue that now overflows; an
+  // explicitly ignored clue stays ignored for this check.
+  found.issues.forEach(item=>{
+    if(clueFitSession.handled.has(item.key)&&!clueFitSession.ignored.has(item.key)){
+      clueFitSession.handled.delete(item.key);
+    }
+  });
+  const issue=found.issues.find(item=>!clueFitSession.handled.has(item.key));
+  if(!issue){
+    finishClueFitCheck();
+    return;
+  }
+  clueFitSession.current=issue;
+  clueFitSession.autoFailed=false;
+  document.getElementById('fit-check-title').textContent='Clue text needs more room';
+  document.getElementById('fit-check-detail').style.display='';
+  document.getElementById('fit-check-finished').style.display='none';
+  document.getElementById('fit-check-stop').style.display='';
+  document.getElementById('fit-check-done').style.display='none';
+  document.getElementById('fit-check-location').textContent=
+    'Row '+(issue.r+1)+', column '+(issue.c+1)+' · clue '+(issue.i+1)+' · '+found.issues.length+' clue'+(found.issues.length===1?'':'s')+' currently not fitting.';
+  document.getElementById('fit-check-clue').textContent=issue.cl.clue||'(no clue text)';
+  const fs=issue.cl.textSize&&issue.cl.textSize>0?issue.cl.textSize:textSizePx;
+  document.getElementById('fit-check-size').textContent='Current text size: '+fs+' px.';
+  document.getElementById('fit-check-size-input').value=fs;
+  document.getElementById('fit-check-status').textContent='';
+  const autoBtn=document.getElementById('fit-check-auto');
+  autoBtn.disabled=false;
+  autoBtn.textContent='Auto-fit & next';
+  setClueFitTarget(issue,true);
+}
+
+function autoFitCurrentClue(){
+  if(!clueFitSession||!clueFitSession.current)return;
+  const issue=clueFitSession.current;
+  const oldSize=issue.cl.textSize&&issue.cl.textSize>0?issue.cl.textSize:textSizePx;
+  let size=Math.max(4,Math.round((Math.min(parseFloat(oldSize)||textSizePx,20)-0.5)*10)/10);
+  while(size>=4){
+    issue.cl.textSize=size;
+    refreshTd(issue.r,issue.c,false);
+    if(clueTextFits(clueFitSlot(issue.r,issue.c,issue.i))){
+      clueFitSession.adjusted.add(issue.key);
+      clueFitSession.handled.add(issue.key);
+      markDirty();
+      showNextClueFitIssue();
+      return;
+    }
+    if(size===4)break;
+    size=Math.max(4,Math.round((size-0.5)*10)/10);
+  }
+  issue.cl.textSize=4;
+  refreshTd(issue.r,issue.c,false);
+  if(oldSize!==4)clueFitSession.adjusted.add(issue.key);
+  markDirty();
+  clueFitSession.autoFailed=true;
+  document.getElementById('fit-check-size-input').value=4;
+  document.getElementById('fit-check-status').textContent=
+    'It still overflows at the minimum 4 px. Choose another size, or ignore this clue and continue.';
+  const autoBtn=document.getElementById('fit-check-auto');
+  autoBtn.disabled=true;
+  autoBtn.textContent='Minimum size reached';
+  setClueFitTarget(issue,false);
+}
+
+function applyManualClueFit(){
+  if(!clueFitSession||!clueFitSession.current)return;
+  const issue=clueFitSession.current;
+  const size=parseFloat(document.getElementById('fit-check-size-input').value);
+  if(!Number.isFinite(size)||size<4||size>20){
+    document.getElementById('fit-check-status').textContent='Choose a font size between 4 and 20 px.';
+    return;
+  }
+  const oldSize=issue.cl.textSize&&issue.cl.textSize>0?issue.cl.textSize:textSizePx;
+  issue.cl.textSize=size;
+  refreshTd(issue.r,issue.c,false);
+  if(size!==oldSize)clueFitSession.adjusted.add(issue.key);
+  markDirty();
+  if(clueTextFits(clueFitSlot(issue.r,issue.c,issue.i))){
+    clueFitSession.handled.add(issue.key);
+    showNextClueFitIssue();
+  }else{
+    document.getElementById('fit-check-size').textContent='Current text size: '+size+' px.';
+    document.getElementById('fit-check-status').textContent=
+      'This size still overflows. Try a smaller size, use Auto-fit, or ignore this clue.';
+    const autoBtn=document.getElementById('fit-check-auto');
+    autoBtn.disabled=size<=4;
+    autoBtn.textContent=size<=4?'Minimum size reached':'Auto-fit & next';
+    setClueFitTarget(issue,false);
+  }
+}
+
+function skipCurrentClueFit(){
+  if(!clueFitSession||!clueFitSession.current)return;
+  const issue=clueFitSession.current;
+  clueFitSession.handled.add(issue.key);
+  clueFitSession.ignored.add(issue.key);
+  showNextClueFitIssue();
+}
+
+function finishClueFitCheck(){
+  if(!clueFitSession)return;
+  const final=collectClueFitIssues();
+  const adjusted=clueFitSession.adjusted.size;
+  const ignored=clueFitSession.ignored.size;
+  document.getElementById('fit-check-title').textContent='Fit check complete';
+  document.getElementById('fit-check-detail').style.display='none';
+  document.getElementById('fit-check-finished').style.display='';
+  document.getElementById('fit-check-stop').style.display='none';
+  document.getElementById('fit-check-done').style.display='';
+  let summary;
+  if(final.issues.length===0){
+    summary=clueFitSession.total+' clue'+(clueFitSession.total===1?'':'s')+' checked; all currently fit.';
+  }else{
+    summary=clueFitSession.total+' clue'+(clueFitSession.total===1?'':'s')+' checked; '+final.issues.length+' still '+(final.issues.length===1?'does':'do')+
+      ' not fit. '+ignored+' ignored; font size changed for '+adjusted+'.';
+  }
+  document.getElementById('fit-check-summary').textContent=summary;
+  setClueFitTarget(null,false);
+}
+
+function closeClueFitCheck(){
+  document.getElementById('clue-fit-modal').classList.remove('open');
+  setClueFitTarget(null,false);
+  clueFitSession=null;
+}
 
 function checkFit(){
   const ans=(document.getElementById('m-ans').value||'').replace(/[^a-zA-Z]/g,'').toUpperCase();
@@ -1790,8 +2043,9 @@ function buildSolverHTML(data,title){
         cell.clues.forEach((cl,idx)=>{
           if(idx>0)inner+='<div class="clue-divider"></div>';
           const fs=(cl.textSize&&cl.textSize>0?cl.textSize:tSz);
+          const boxWeight=clueBoxWeight(cl);
           const txtH=`<div class="slot-text" style="font-size:${fs}px">${(cl.clue||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>`;
-          inner+=`<div class="clue-slot" data-r="${r}" data-c="${c}" data-ci="${idx}" style="flex:${fs} 1 0">${txtH}</div>`;
+          inner+=`<div class="clue-slot" data-r="${r}" data-c="${c}" data-ci="${idx}" style="flex:${boxWeight} 1 0">${txtH}</div>`;
         });
         tableRows+=`<td class="t-clue" style="${sz}"><div class="clue-inner">${inner}</div></td>`;
       } else if(cell.t==='answer'){
@@ -2330,6 +2584,10 @@ const CHANGELOG=[
 function openChangelog(){
   const body=document.getElementById('changelog-body');
   const log=[
+    {v:'v24',notes:['Added a 🌐 Publish to the Web button beside Quicksave on the Design Grid tab. It publishes the current edited puzzle to the public directory.']},
+    {v:'v23',notes:['Print and exported solver layouts now use the same clue-text-based box shares as the builder. Fitted font sizes are preserved through the local save/load path.']},
+    {v:'v22',notes:['Fixed clue-box sizing: longer clue text gets a larger cell share, independent of font size, so auto-fitting cannot shrink the clue box and squeeze the clue further.']},
+    {v:'v21',notes:['Added a clue-box fit checker that finds overflowing clue text, jumps to each affected clue, auto-fits or applies a chosen font size, and lets you ignore individual clues.']},
     {v:'v20',notes:['Merged celebration and rating modal — no skip button. Added optional comments field to completion modal. Added "Comment / Report" button in solver (orange). Separated comment types: Feedback, Bug reports, Rating comments. Updated admin dashboard to show all 3 comment types. Yellow stars in rating (default 5 stars). Updated delete-puzzles page to "Manage & Delete Puzzles" with rename functionality.']},
     {v:'v19',notes:['Switched puzzle storage from GitHub to Supabase (no tokens needed). Published puzzles now managed in builder. Directory sorting (A-Z, Newest, Oldest). Favicon added. Sign-in required to solve. Sanity cleanup.']},
     {v:'v18',notes:['Complete auth rewrite using Supabase. Real Google OAuth login. Facebook login support. Sign-in prompt appears on Solve click. Progress and completions saved to cloud. Check count tracked per user. Cross-device sync. Reveal button removed. Admin dashboard foundation. Per-user stats (puzzles started, completed, checks).']},
@@ -2517,6 +2775,9 @@ buildDirGrid('dir-grid','m-dir',32,checkFit);
 buildGrid();
 showDraftBannerIfAny();
 updatePuzzleTitle();
+document.getElementById('clue-fit-modal').addEventListener('click',function(e){
+  if(e.target===this)closeClueFitCheck();
+});
 // v13: bind two-finger pinch-to-zoom on the design grid host.
 enableGridPinchZoom('#tab-design .grid-wrap', function(){return dZoom;}, dSetZoom);
 // Save once more right before the tab is closed/refreshed, just in case
