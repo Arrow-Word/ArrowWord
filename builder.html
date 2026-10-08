@@ -78,7 +78,7 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
 .clue-inner{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
 /* each slot's flex-grow is set inline based on its text size so smaller-text
    clues take less room and dividers re-flow automatically */
-.clue-slot{display:flex;flex:1 1 0;min-height:0;overflow:hidden;padding:1px 2px;position:relative}
+.clue-slot{display:flex;flex:1 1 0;min-height:0;overflow:hidden;padding:1px 2px;position:relative;align-items:center;justify-content:center}
 /* arrow RIGHT of text (default) */
 .clue-slot.ap-right{flex-direction:row;align-items:center;justify-content:center}
 /* arrow LEFT of text */
@@ -93,12 +93,20 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
 .clue-slot.solve-clickable:hover{background:rgba(119,68,187,0.08)}
 .clue-slot.active-clue{background:rgba(119,68,187,0.18)}
 .slot-text{font-weight:600;color:#443366;overflow:hidden;flex:0 1 auto;line-height:1.15;text-align:center;overflow-wrap:normal;word-break:normal;hyphens:none}
+.clue-slot .slot-text{display:flex;width:100%;height:100%;flex:1 1 auto;align-items:center;justify-content:center}
 .clue-slot.ap-right .slot-text,.clue-slot.ap-left .slot-text{flex:1 1 auto}
 .slot-arrow{flex-shrink:0;display:block;line-height:0}
 .slot-arrow svg{display:block}
 .clue-divider{height:1px;background:#9966cc;opacity:0.6;flex-shrink:0;margin:0 2px}
 .ans-letter{font-weight:600;color:#222;line-height:1}
 .solve-input{width:100%;height:100%;border:none;background:transparent;text-align:center;font-weight:600;color:#222;outline:none;text-transform:uppercase;display:block;cursor:text}
+.ans-letter,.solve-input{position:relative;z-index:1}
+.answer-arrow-marker{position:absolute;display:block;width:var(--arrow-size);height:var(--arrow-size);z-index:2;pointer-events:none;line-height:0}
+.answer-arrow-marker svg{display:block;width:100%;height:100%}
+.answer-arrow-marker.edge-left{left:1px;top:var(--slot-position);transform:translateY(-50%)}
+.answer-arrow-marker.edge-right{right:1px;top:var(--slot-position);transform:translateY(-50%)}
+.answer-arrow-marker.edge-top{top:1px;left:var(--slot-position);transform:translateX(-50%)}
+.answer-arrow-marker.edge-bottom{bottom:1px;left:var(--slot-position);transform:translateX(-50%)}
 .solve-input:focus{background:#fffde0}
 .solve-input.wrong{background:#ffd0d8;color:#a01030}
 .solve-input.wrong:focus{background:#ffe0e6}
@@ -496,6 +504,13 @@ function arrowSVG(dir, s) {
   return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg"><path d="${p}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${a}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
+function answerArrowSVG(dir,s,color='#7744bb'){
+  const thinStroke=Math.max(1,s/16);
+  return arrowSVG(dir,s)
+    .replace(/stroke-width="[^"]+"/g,`stroke-width="${thinStroke}"`)
+    .replaceAll('#7744bb',color);
+}
+
 const DIRECTIONS=[
   {key:'right',     label:'Right'},
   {key:'left',      label:'Left'},
@@ -571,6 +586,52 @@ function getWordCells(dir,ans,or,oc){
   else if(dir==='left-up')   {const t=[[or,oc-1]];for(let i=1;i<len;i++)t.push([or-i,oc-1]);t.sort((a,b)=>a[0]-b[0]);cells.push(...t);}
   else if(dir==='up-left')   {const t=[[or-1,oc]];for(let i=1;i<len;i++)t.push([or-1,oc-i]);t.sort((a,b)=>a[1]-b[1]);cells.push(...t);}
   return cells;
+}
+
+function firstAnswerTarget(dir,or,oc){
+  const steps={
+    right:[0,1,'left'],left:[0,-1,'right'],down:[1,0,'top'],up:[-1,0,'bottom'],
+    'right-down':[0,1,'left'],'down-right':[1,0,'top'],
+    'left-down':[0,-1,'right'],'down-left':[1,0,'top'],
+    'right-up':[0,1,'left'],'up-right':[-1,0,'bottom'],
+    'left-up':[0,-1,'right'],'up-left':[-1,0,'bottom']
+  };
+  const [dr,dc,edge]=steps[dir]||steps.right;
+  return {r:or+dr,c:oc+dc,edge};
+}
+
+function getAnswerArrowMarkers(r,c,grid=G,baseTextPx=textSizePx){
+  const markers=[];
+  for(let or=0;or<grid.length;or++){
+    for(let oc=0;oc<(grid[or]||[]).length;oc++){
+      const owner=grid[or][oc];
+      if(owner.t!=='clue'||!Array.isArray(owner.clues)||!owner.clues.length)continue;
+      const weights=owner.clues.map(cl=>cl.textSize&&cl.textSize>0?cl.textSize:baseTextPx);
+      const total=weights.reduce((sum,value)=>sum+value,0)||owner.clues.length;
+      let consumed=0;
+      owner.clues.forEach((cl,index)=>{
+        const weight=weights[index]||1;
+        const target=firstAnswerTarget(cl.dir,or,oc);
+        if(target.r===r&&target.c===c){
+          markers.push({dir:cl.dir,edge:target.edge,position:((consumed+weight/2)/total)*100});
+        }
+        consumed+=weight;
+      });
+    }
+  }
+  return markers;
+}
+
+function appendAnswerArrowMarkers(td,r,c,grid=G,cellPx=cellSizePx,baseTextPx=textSizePx,color='#7744bb'){
+  const markerSize=Math.max(8,Math.round(cellPx*0.25));
+  getAnswerArrowMarkers(r,c,grid,baseTextPx).forEach(marker=>{
+    const el=document.createElement('span');
+    el.className='answer-arrow-marker edge-'+marker.edge;
+    el.style.setProperty('--arrow-size',markerSize+'px');
+    el.style.setProperty('--slot-position',marker.position+'%');
+    el.innerHTML=answerArrowSVG(marker.dir,markerSize,color);
+    td.appendChild(el);
+  });
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -652,22 +713,17 @@ function makeTd(r,c,solve){
   } else if(cell.t==='clue'){
     td.className='t-clue';
     const inner=document.createElement('div');inner.className='clue-inner';
-    const arrowSz=asz();
-    const isMulti=cell.clues.length>1;
     cell.clues.forEach((cl,idx)=>{
       if(idx>0){const dv=document.createElement('div');dv.className='clue-divider';inner.appendChild(dv);}
       const slot=document.createElement('div');
-      slot.className='clue-slot '+apClass(cl.dir, isMulti);
+      slot.className='clue-slot';
       const fs=cl.textSize&&cl.textSize>0?cl.textSize:textSizePx;
       // FIX 1: flex-grow proportional to font size — smaller clues take less room
       slot.style.flex=fs+' 1 0';
-      const arrDiv=document.createElement('div');arrDiv.className='slot-arrow';
-      arrDiv.innerHTML=arrowSVG(cl.dir,arrowSz);
       const txtDiv=document.createElement('div');txtDiv.className='slot-text';
       txtDiv.style.fontSize=fs+'px';
       txtDiv.textContent=cl.clue||'?';
       slot.appendChild(txtDiv);
-      slot.appendChild(arrDiv);
       if(solve){
         slot.classList.add('solve-clickable');
         slot.dataset.clueIdx=idx;
@@ -696,6 +752,7 @@ function makeTd(r,c,solve){
       td.appendChild(sp);
       td.onclick=()=>cellClick(r,c);
     }
+    appendAnswerArrowMarkers(td,r,c);
   } else {
     td.className='t-empty';
     if(!solve)td.onclick=()=>cellClick(r,c);
@@ -762,6 +819,37 @@ function printPuzzle(){
           svg.appendChild(letter);
         }
 
+        if(cell.t==='answer'){
+          const markerSize=Math.max(6,printCellSize*0.25);
+          getAnswerArrowMarkers(r,c).forEach(marker=>{
+            let markerX=x+printCellSize/2-markerSize/2;
+            let markerY=y+printCellSize/2-markerSize/2;
+            if(marker.edge==='left'){
+              markerX=x+1.5*scale;
+              markerY=y+printCellSize*marker.position/100-markerSize/2;
+            }else if(marker.edge==='right'){
+              markerX=x+printCellSize-markerSize-1.5*scale;
+              markerY=y+printCellSize*marker.position/100-markerSize/2;
+            }else if(marker.edge==='top'){
+              markerX=x+printCellSize*marker.position/100-markerSize/2;
+              markerY=y+1.5*scale;
+            }else{
+              markerX=x+printCellSize*marker.position/100-markerSize/2;
+              markerY=y+printCellSize-markerSize-1.5*scale;
+            }
+            const parsed=new DOMParser().parseFromString(
+              answerArrowSVG(marker.dir,markerSize),
+              'image/svg+xml'
+            );
+            const markerSvg=document.importNode(parsed.documentElement,true);
+            markerSvg.setAttribute('x',markerX);
+            markerSvg.setAttribute('y',markerY);
+            markerSvg.setAttribute('width',markerSize);
+            markerSvg.setAttribute('height',markerSize);
+            svg.appendChild(markerSvg);
+          });
+        }
+
         if(cell.t==='clue'&&Array.isArray(cell.clues)&&cell.clues.length){
           const clues=cell.clues;
           const gap=clues.length>1?0.6:0;
@@ -786,26 +874,13 @@ function printPuzzle(){
               height:Math.max(1,slotHeight-inset*2)
             });
             const slot=document.createElementNS(htmlNS,'div');
-            const multi=clues.length>1;
-            let arrowPos=APOS[cl.dir]||'right';
-            if(multi&&(arrowPos==='top'||arrowPos==='bottom'))arrowPos='right';
             slot.style.cssText='width:100%;height:100%;box-sizing:border-box;display:flex;overflow:hidden;padding:1px 2px;align-items:center;justify-content:center;';
-            slot.style.flexDirection=(arrowPos==='top'||arrowPos==='bottom')?'column':'row';
 
             const text=document.createElementNS(htmlNS,'div');
             text.textContent=cl.clue||'?';
-            text.style.cssText='font-family:Arial,sans-serif;font-weight:600;color:#222;line-height:1.15;text-align:center;overflow:hidden;overflow-wrap:normal;word-break:normal;hyphens:none;min-width:0;min-height:0;';
+            text.style.cssText='font-family:Arial,sans-serif;font-weight:600;color:#222;line-height:1.15;text-align:center;overflow:hidden;overflow-wrap:normal;word-break:normal;hyphens:none;min-width:0;min-height:0;width:100%;flex:1 1 auto;';
             text.style.fontSize=(sizes[index]*scale)+'px';
-            const arrowSize=asz()*scale;
-            const arrow=document.createElementNS(htmlNS,'div');
-            arrow.style.cssText='display:block;flex:0 0 '+arrowSize+'px;width:'+arrowSize+'px;height:'+arrowSize+'px;line-height:0;';
-            arrow.innerHTML=arrowSVG(cl.dir,arrowSize).replaceAll('#7744bb','#222');
-
-            if(arrowPos==='left'||arrowPos==='top'){
-              slot.appendChild(arrow);slot.appendChild(text);
-            }else{
-              slot.appendChild(text);slot.appendChild(arrow);
-            }
+            slot.appendChild(text);
             fo.appendChild(slot);
             svg.appendChild(fo);
             slotY+=slotHeight;
@@ -1712,19 +1787,20 @@ function buildSolverHTML(data,title){
       if(cell.t==='black'){tableRows+=`<td class="t-black" style="${sz}"></td>`;}
       else if(cell.t==='clue'){
         let inner='';
-        const isMulti=cell.clues.length>1;
         cell.clues.forEach((cl,idx)=>{
           if(idx>0)inner+='<div class="clue-divider"></div>';
-          const apc=eAPC(cl.dir,isMulti);
           const fs=(cl.textSize&&cl.textSize>0?cl.textSize:tSz);
-          const arrH=`<div class="slot-arrow">${eSVG(cl.dir,arSz)}</div>`;
           const txtH=`<div class="slot-text" style="font-size:${fs}px">${(cl.clue||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>`;
-          inner+=`<div class="clue-slot ${apc}" data-r="${r}" data-c="${c}" data-ci="${idx}" style="flex:${fs} 1 0">${txtH}${arrH}</div>`;
+          inner+=`<div class="clue-slot" data-r="${r}" data-c="${c}" data-ci="${idx}" style="flex:${fs} 1 0">${txtH}</div>`;
         });
         tableRows+=`<td class="t-clue" style="${sz}"><div class="clue-inner">${inner}</div></td>`;
       } else if(cell.t==='answer'){
         const letter=cell.answerOf?cell.answerOf.letter:'';
-        tableRows+=`<td class="t-answer" data-ans="${letter}" data-r="${r}" data-c="${c}" style="${sz}"><input class="solve-input" type="text" maxlength="1" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text" data-r="${r}" data-c="${c}" style="font-size:${Math.round(cSz*0.38)}px"></td>`;
+        const markerSize=Math.max(8,Math.round(cSz*0.25));
+        const markers=getAnswerArrowMarkers(r,c,G2,tSz).map(marker=>
+          `<span class="answer-arrow-marker edge-${marker.edge}" style="--arrow-size:${markerSize}px;--slot-position:${marker.position}%">${answerArrowSVG(marker.dir,markerSize)}</span>`
+        ).join('');
+        tableRows+=`<td class="t-answer" data-ans="${letter}" data-r="${r}" data-c="${c}" style="${sz}">${markers}<input class="solve-input" type="text" maxlength="1" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text" data-r="${r}" data-c="${c}" style="font-size:${Math.round(cSz*0.38)}px"></td>`;
       } else {
         tableRows+=`<td class="t-empty" style="${sz}"></td>`;
       }
@@ -1767,8 +1843,14 @@ td.t-empty{background:#fff}
 td.t-black{background:#333}
 td.t-clue{background:#e8e0f0}
 td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
+.answer-arrow-marker{position:absolute;display:block;width:var(--arrow-size);height:var(--arrow-size);z-index:2;pointer-events:none;line-height:0}
+.answer-arrow-marker svg{display:block;width:100%;height:100%}
+.answer-arrow-marker.edge-left{left:1px;top:var(--slot-position);transform:translateY(-50%)}
+.answer-arrow-marker.edge-right{right:1px;top:var(--slot-position);transform:translateY(-50%)}
+.answer-arrow-marker.edge-top{top:1px;left:var(--slot-position);transform:translateX(-50%)}
+.answer-arrow-marker.edge-bottom{bottom:1px;left:var(--slot-position);transform:translateX(-50%)}
 .clue-inner{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
-.clue-slot{display:flex;flex:1 1 0;min-height:0;overflow:hidden;padding:1px 2px;cursor:pointer}
+.clue-slot{display:flex;flex:1 1 0;min-height:0;overflow:hidden;padding:1px 2px;cursor:pointer;align-items:center;justify-content:center}
 .clue-slot:hover{background:rgba(119,68,187,0.08)}
 .clue-slot.active-clue{background:rgba(119,68,187,0.18)}
 .clue-slot.ap-right{flex-direction:row;align-items:center;justify-content:center}
@@ -1777,12 +1859,12 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 .clue-slot.ap-bottom{flex-direction:column;align-items:center;justify-content:center}
 .clue-slot.ap-top{flex-direction:column;align-items:center;justify-content:center}
 .clue-slot.ap-top .slot-arrow{order:-1}
-.slot-text{font-weight:600;color:#443366;overflow:hidden;flex:0 1 auto;line-height:1.15;text-align:center;overflow-wrap:normal;word-break:normal;hyphens:none}
+.slot-text{display:flex;align-items:center;justify-content:center;font-weight:600;color:#443366;overflow:hidden;flex:1 1 auto;width:100%;line-height:1.15;text-align:center;overflow-wrap:normal;word-break:normal;hyphens:none}
 .clue-slot.ap-right .slot-text,.clue-slot.ap-left .slot-text{flex:1 1 auto}
 .slot-arrow{flex-shrink:0;display:block;line-height:0}
 .slot-arrow svg{display:block}
 .clue-divider{height:1px;background:#9966cc;opacity:0.6;flex-shrink:0;margin:0 2px}
-.solve-input{width:100%;height:100%;border:none;background:transparent;text-align:center;font-weight:600;color:#222;outline:none;text-transform:uppercase;display:block;cursor:text}
+ .solve-input{position:relative;z-index:1;width:100%;height:100%;border:none;background:transparent;text-align:center;font-weight:600;color:#222;outline:none;text-transform:uppercase;display:block;cursor:text}
 .solve-input:focus{background:#fffde0}
 .solve-input.wrong{background:#ffd0d8;color:#a01030}
 .solve-input.wrong:focus{background:#ffe0e6}

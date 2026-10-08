@@ -145,8 +145,14 @@ td.t-black{background:#333}
 td.t-clue{background:#e8e0f0;cursor:pointer}
 td.t-clue:hover{background:#ddd0ee}
 td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
+.answer-arrow-marker{position:absolute;display:block;width:var(--arrow-size);height:var(--arrow-size);z-index:2;pointer-events:none;line-height:0}
+.answer-arrow-marker svg{display:block;width:100%;height:100%}
+.answer-arrow-marker.edge-left{left:1px;top:var(--slot-position);transform:translateY(-50%)}
+.answer-arrow-marker.edge-right{right:1px;top:var(--slot-position);transform:translateY(-50%)}
+.answer-arrow-marker.edge-top{top:1px;left:var(--slot-position);transform:translateX(-50%)}
+.answer-arrow-marker.edge-bottom{bottom:1px;left:var(--slot-position);transform:translateX(-50%)}
 .clue-inner{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
-.clue-slot{display:flex;flex:1 1 0;min-height:0;overflow:hidden;padding:1px 2px;cursor:pointer}
+.clue-slot{display:flex;flex:1 1 0;min-height:0;overflow:hidden;padding:1px 2px;cursor:pointer;align-items:center;justify-content:center}
 .clue-slot:hover{background:rgba(119,68,187,0.08)}
 .clue-slot.active-clue{background:rgba(119,68,187,0.18)}
 .clue-slot.ap-right{flex-direction:row;align-items:center;justify-content:center}
@@ -156,21 +162,34 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
 .clue-slot.ap-top{flex-direction:column;align-items:center;justify-content:center}
 .clue-slot.ap-top .slot-arrow{order:-1}
 .slot-text{font-weight:600;color:#443366;overflow:hidden;flex:0 1 auto;line-height:1.15;text-align:center;word-break:normal;hyphens:none}
+.clue-slot .slot-text{display:flex;width:100%;height:100%;flex:1 1 auto;align-items:center;justify-content:center}
 .clue-slot.ap-right .slot-text,.clue-slot.ap-left .slot-text{flex:1 1 auto}
 .slot-arrow{flex-shrink:0;display:block;line-height:0}
 .slot-arrow svg{display:block}
 .clue-divider{height:1px;background:#9966cc;opacity:0.6;flex-shrink:0;margin:0 2px}
-.solve-input{width:100%;height:100%;border:none;background:transparent;text-align:center;font-weight:600;color:#222;outline:none;text-transform:uppercase;display:block;cursor:text}
+.solve-input{position:relative;z-index:1;width:100%;height:100%;border:none;background:transparent;text-align:center;font-weight:600;color:#222;outline:none;text-transform:uppercase;display:block;cursor:text}
 .solve-input:focus{background:#fffde0}
 .solve-input.wrong{background:#ffd0d8!important;color:#a01030}
 .solve-input.in-active-word{background:#fff5b8}
 .solve-input.active-cell,.solve-input:focus.active-cell{background:#ffe680}
+#solver-print-pages{display:none}
+@page{size:A4 portrait;margin:0}
 @media print{
-  nav,.page-header,main,.solve-toolbar,.zoom-bar,.solver-header{display:none!important}
-  td.t-answer{background:#fff!important}
-  td.t-clue{background:#e8e0f0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  td.t-black{background:#333!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .solve-input{display:none}
+  html,body{width:210mm!important;margin:0!important;padding:0!important;background:#fff!important}
+  body.solver-printing>*:not(#solver-print-pages){display:none!important}
+  body.solver-printing #solver-print-pages{display:block!important}
+  .print-page{
+    width:210mm;height:297mm;box-sizing:border-box;padding:12mm;
+    display:grid;grid-template-rows:auto 1fr;page-break-after:always;break-after:page;
+    overflow:hidden;background:#fff;color:#111;
+  }
+  .print-page:last-child{page-break-after:auto;break-after:auto}
+  .print-title{font:700 17pt Arial,sans-serif;text-align:center;overflow-wrap:anywhere;padding:0 0 7mm}
+  .print-grid-area{min-height:0;display:flex;align-items:center;justify-content:center}
+  .print-svg{
+    display:block;max-width:100%;max-height:100%;overflow:visible;
+    print-color-adjust:exact;-webkit-print-color-adjust:exact;
+  }
 }
 
 .solver-timer{font-size:13px;color:#e8d8ff;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:12px;font-variant-numeric:tabular-nums;min-width:60px;text-align:center}
@@ -279,7 +298,7 @@ td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
           <button class="orange" onclick="openCommentModal()">💬 Comment / Report</button>
         </div>
         <div class="solve-toolbar-right">
-          <button class="green" onclick="window.print()">🖨 Print</button>
+          <button class="green" onclick="printSolverPuzzle()">🖨 Print</button>
           <button class="warn" onclick="solverClear()">Clear</button>
         </div>
       </div>
@@ -314,6 +333,10 @@ function arrowSVG(dir,s){
   const[p,a]=paths[dir]||paths.right;
   return`<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg"><path d="${p}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${a}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
+function answerArrowSVG(dir,s){
+  const thinStroke=Math.max(1,s/16);
+  return arrowSVG(dir,s).replace(/stroke-width="[^"]+"/g,`stroke-width="${thinStroke}"`);
+}
 const EAPOS={right:'right',left:'left',down:'bottom',up:'top','right-down':'right','down-right':'bottom','left-down':'left','down-left':'bottom','right-up':'right','up-right':'top','left-up':'left','up-left':'top'};
 function eAPC(dir,isMulti){let p=EAPOS[dir]||'right';if(isMulti&&(p==='top'||p==='bottom'))p='right';if(p==='left')return'ap-left';if(p==='bottom')return'ap-bottom';if(p==='top')return'ap-top';return'ap-right';}
 function getWordCells(dir,ans,or,oc){
@@ -331,6 +354,52 @@ function getWordCells(dir,ans,or,oc){
   else if(dir==='left-up'){const t=[[or,oc-1]];for(let i=1;i<len;i++)t.push([or-i,oc-1]);t.sort((a,b)=>a[0]-b[0]);cells.push(...t);}
   else if(dir==='up-left'){const t=[[or-1,oc]];for(let i=1;i<len;i++)t.push([or-1,oc-i]);t.sort((a,b)=>a[1]-b[1]);cells.push(...t);}
   return cells;
+}
+
+function firstAnswerTarget(dir,or,oc){
+  const steps={
+    right:[0,1,'left'],left:[0,-1,'right'],down:[1,0,'top'],up:[-1,0,'bottom'],
+    'right-down':[0,1,'left'],'down-right':[1,0,'top'],
+    'left-down':[0,-1,'right'],'down-left':[1,0,'top'],
+    'right-up':[0,1,'left'],'up-right':[-1,0,'bottom'],
+    'left-up':[0,-1,'right'],'up-left':[-1,0,'bottom']
+  };
+  const [dr,dc,edge]=steps[dir]||steps.right;
+  return {r:or+dr,c:oc+dc,edge};
+}
+
+function getAnswerArrowMarkers(r,c,grid,baseTextPx){
+  const markers=[];
+  for(let or=0;or<grid.length;or++){
+    for(let oc=0;oc<(grid[or]||[]).length;oc++){
+      const owner=grid[or][oc];
+      if(owner.t!=='clue'||!Array.isArray(owner.clues)||!owner.clues.length)continue;
+      const weights=owner.clues.map(cl=>cl.textSize&&cl.textSize>0?cl.textSize:baseTextPx);
+      const total=weights.reduce((sum,value)=>sum+value,0)||owner.clues.length;
+      let consumed=0;
+      owner.clues.forEach((cl,index)=>{
+        const weight=weights[index]||1;
+        const target=firstAnswerTarget(cl.dir,or,oc);
+        if(target.r===r&&target.c===c){
+          markers.push({dir:cl.dir,edge:target.edge,position:((consumed+weight/2)/total)*100});
+        }
+        consumed+=weight;
+      });
+    }
+  }
+  return markers;
+}
+
+function appendAnswerArrowMarkers(td,r,c,grid,cellPx,baseTextPx){
+  const markerSize=Math.max(8,Math.round(cellPx*0.25));
+  getAnswerArrowMarkers(r,c,grid,baseTextPx).forEach(marker=>{
+    const el=document.createElement('span');
+    el.className='answer-arrow-marker edge-'+marker.edge;
+    el.style.setProperty('--arrow-size',markerSize+'px');
+    el.style.setProperty('--slot-position',marker.position+'%');
+    el.innerHTML=answerArrowSVG(marker.dir,markerSize);
+    td.appendChild(el);
+  });
 }
 
 // ── Auth state ────────────────────────────────────────────────────────────────
@@ -496,6 +565,7 @@ function cardHtml(p) {
 
 // ── Solver ────────────────────────────────────────────────────────────────────
 let sWords = [], sActive = null, sCurZoom = 1, sCurPuzzleId = null;
+let sPrintGrid = null, sPrintRows = 0, sPrintCols = 0, sPrintCellSizePx = 64, sPrintTextSizePx = 12;
 
 function solverBgClick(e) { if (e.target === document.getElementById('solver-overlay')) closeSolver(); }
 function gridWrapClick(e) {
@@ -614,6 +684,7 @@ function buildSolverGrid(data) {
       });
     }
   });
+  sPrintGrid=G2;sPrintRows=rows;sPrintCols=cols;sPrintCellSizePx=cSz;sPrintTextSizePx=tSz;
   const sz=`width:${cSz}px;height:${cSz}px;min-width:${cSz}px;min-height:${cSz}px;max-width:${cSz}px;max-height:${cSz}px`;
   const tbl=document.getElementById('s-grid');tbl.innerHTML='';
   for(let r=0;r<rows;r++){
@@ -624,14 +695,13 @@ function buildSolverGrid(data) {
       else if(cell.t==='clue'){
         td.className='t-clue';
         const inner=document.createElement('div');inner.className='clue-inner';
-        const isMulti=cell.clues.length>1;
         cell.clues.forEach((cl,idx)=>{
           if(idx>0){const dv=document.createElement('div');dv.className='clue-divider';inner.appendChild(dv);}
-          const slot=document.createElement('div');slot.className='clue-slot '+eAPC(cl.dir,isMulti);
+          const slot=document.createElement('div');slot.className='clue-slot';
           slot.dataset.or=r;slot.dataset.oc=c;slot.dataset.ci=idx;
           const fs=cl.textSize&&cl.textSize>0?cl.textSize:tSz;
           slot.style.flex=fs+' 1 0';
-          slot.innerHTML=`<div class="slot-text" style="font-size:${fs}px">${escHtml(cl.clue||'?')}</div><div class="slot-arrow">${arrowSVG(cl.dir,arSz)}</div>`;
+          slot.innerHTML=`<div class="slot-text" style="font-size:${fs}px">${escHtml(cl.clue||'?')}</div>`;
           slot.addEventListener('click',e=>{e.stopPropagation();sPickClue(+slot.dataset.or,+slot.dataset.oc,+slot.dataset.ci);});
           inner.appendChild(slot);
         });
@@ -643,11 +713,183 @@ function buildSolverGrid(data) {
         inp.setAttribute('autocapitalize','characters');inp.setAttribute('autocomplete','off');inp.setAttribute('autocorrect','off');inp.setAttribute('spellcheck','false');
         inp.addEventListener('input',e=>{startTimer();sSolveInput(e);});inp.addEventListener('keydown',sSolveKeydown);inp.addEventListener('focus',e=>{startTimer();sSolveFocus(e);});
         td.appendChild(inp);
+        appendAnswerArrowMarkers(td,r,c,G2,cSz,tSz);
       }else{td.className='t-empty';}
       tr.appendChild(td);
     }
     tbl.appendChild(tr);
   }
+}
+
+function printSolverPuzzle(){
+  if(!sPrintGrid||!sPrintGrid.length||!sPrintRows||!sPrintCols){alert('There is no puzzle grid to print yet.');return;}
+
+  const pages=document.getElementById('solver-print-pages')||document.body.appendChild(document.createElement('div'));
+  pages.id='solver-print-pages';
+  pages.replaceChildren();
+  const pageName=(document.getElementById('solver-title').textContent||'').trim()||'Untitled puzzle';
+  const availableWidth=(210-24)/25.4*96;
+  const availableHeight=(297-24-18)/25.4*96;
+  const printCellSize=Math.min(84,availableWidth/sPrintCols,availableHeight/sPrintRows);
+  const scale=printCellSize/sPrintCellSizePx;
+  const svgNS='http://www.w3.org/2000/svg';
+  const htmlNS='http://www.w3.org/1999/xhtml';
+
+  function svgNode(name,attrs){
+    const node=document.createElementNS(svgNS,name);
+    Object.keys(attrs||{}).forEach(key=>node.setAttribute(key,attrs[key]));
+    return node;
+  }
+
+  function buildPrintGrid(showAnswers){
+    const width=sPrintCols*printCellSize,height=sPrintRows*printCellSize;
+    const svg=svgNode('svg',{
+      class:'print-svg',xmlns:svgNS,
+      width:width+'px',height:height+'px',
+      viewBox:'0 0 '+width+' '+height,
+      role:'img','aria-label':showAnswers?'Puzzle answer grid':'Blank puzzle grid'
+    });
+    svg.style.width=width+'px';
+    svg.style.height=height+'px';
+    svg.style.printColorAdjust='exact';
+    svg.style.webkitPrintColorAdjust='exact';
+
+    for(let r=0;r<sPrintRows;r++){
+      for(let c=0;c<sPrintCols;c++){
+        const cell=sPrintGrid[r][c]||{t:'empty'};
+        const x=c*printCellSize,y=r*printCellSize;
+        const fill=cell.t==='black'?'#222':cell.t==='clue'?'#eee9f2':'#fff';
+        svg.appendChild(svgNode('rect',{
+          x:x,y:y,width:printCellSize,height:printCellSize,fill:fill
+        }));
+
+        if(cell.t==='answer'&&showAnswers&&cell.answerOf&&cell.answerOf.letter){
+          const letter=svgNode('text',{
+            x:x+printCellSize/2,y:y+printCellSize/2,
+            'text-anchor':'middle','dominant-baseline':'central',
+            'font-family':'Arial, sans-serif','font-size':Math.round(sPrintCellSizePx*.38)*scale,
+            'font-weight':'600',fill:'#111'
+          });
+          letter.textContent=cell.answerOf.letter;
+          svg.appendChild(letter);
+        }
+
+        if(cell.t==='answer'){
+          const markerSize=Math.max(6,printCellSize*0.25);
+          getAnswerArrowMarkers(r,c,sPrintGrid,sPrintTextSizePx).forEach(marker=>{
+            let markerX=x+printCellSize/2-markerSize/2;
+            let markerY=y+printCellSize/2-markerSize/2;
+            if(marker.edge==='left'){
+              markerX=x+1.5*scale;
+              markerY=y+printCellSize*marker.position/100-markerSize/2;
+            }else if(marker.edge==='right'){
+              markerX=x+printCellSize-markerSize-1.5*scale;
+              markerY=y+printCellSize*marker.position/100-markerSize/2;
+            }else if(marker.edge==='top'){
+              markerX=x+printCellSize*marker.position/100-markerSize/2;
+              markerY=y+1.5*scale;
+            }else{
+              markerX=x+printCellSize*marker.position/100-markerSize/2;
+              markerY=y+printCellSize-markerSize-1.5*scale;
+            }
+            const parsed=new DOMParser().parseFromString(
+              answerArrowSVG(marker.dir,markerSize),
+              'image/svg+xml'
+            );
+            const markerSvg=document.importNode(parsed.documentElement,true);
+            markerSvg.setAttribute('x',markerX);
+            markerSvg.setAttribute('y',markerY);
+            markerSvg.setAttribute('width',markerSize);
+            markerSvg.setAttribute('height',markerSize);
+            svg.appendChild(markerSvg);
+          });
+        }
+
+        if(cell.t==='clue'&&Array.isArray(cell.clues)&&cell.clues.length){
+          const clues=cell.clues;
+          const gap=clues.length>1?0.6:0;
+          const usableHeight=printCellSize-gap*(clues.length-1);
+          const sizes=clues.map(cl=>cl.textSize&&cl.textSize>0?cl.textSize:sPrintTextSizePx);
+          const totalSize=sizes.reduce((sum,size)=>sum+size,0)||clues.length;
+          let slotY=y;
+          clues.forEach((cl,index)=>{
+            const slotHeight=usableHeight*(sizes[index]/totalSize);
+            if(index>0){
+              svg.appendChild(svgNode('line',{
+                x1:x+2,y1:slotY+gap/2,x2:x+printCellSize-2,y2:slotY+gap/2,
+                stroke:'#9966cc','stroke-width':'0.7'
+              }));
+              slotY+=gap;
+            }
+
+            const inset=1;
+            const fo=svgNode('foreignObject',{
+              x:x+inset,y:slotY+inset,
+              width:Math.max(1,printCellSize-inset*2),
+              height:Math.max(1,slotHeight-inset*2)
+            });
+            const slot=document.createElementNS(htmlNS,'div');
+            slot.style.cssText='width:100%;height:100%;box-sizing:border-box;display:flex;overflow:hidden;padding:1px 2px;align-items:center;justify-content:center;';
+
+            const text=document.createElementNS(htmlNS,'div');
+            text.textContent=cl.clue||'?';
+            text.style.cssText='font-family:Arial,sans-serif;font-weight:600;color:#222;line-height:1.15;text-align:center;overflow:hidden;overflow-wrap:normal;word-break:normal;hyphens:none;min-width:0;min-height:0;width:100%;flex:1 1 auto;';
+            text.style.fontSize=(sizes[index]*scale)+'px';
+            slot.appendChild(text);
+            fo.appendChild(slot);
+            svg.appendChild(fo);
+            slotY+=slotHeight;
+          });
+        }
+      }
+    }
+
+    // Draw every grid boundary once, above the cell contents, just like the
+    // builder's print grid. SVG strokes avoid missing or collapsed borders.
+    const lineWidth=1.1;
+    for(let c=0;c<=sPrintCols;c++){
+      const x=c===0?lineWidth/2:c===sPrintCols?width-lineWidth/2:c*printCellSize;
+      svg.appendChild(svgNode('line',{
+        x1:x,y1:0,x2:x,y2:height,stroke:'#222',
+        'stroke-width':lineWidth,'shape-rendering':'crispEdges'
+      }));
+    }
+    for(let r=0;r<=sPrintRows;r++){
+      const y=r===0?lineWidth/2:r===sPrintRows?height-lineWidth/2:r*printCellSize;
+      svg.appendChild(svgNode('line',{
+        x1:0,y1:y,x2:width,y2:y,stroke:'#222',
+        'stroke-width':lineWidth,'shape-rendering':'crispEdges'
+      }));
+    }
+    return svg;
+  }
+
+  function addPrintPage(showAnswers){
+    const page=document.createElement('section');
+    page.className='print-page';
+    const heading=document.createElement('h1');
+    heading.className='print-title';
+    heading.textContent=pageName;
+    const gridArea=document.createElement('div');
+    gridArea.className='print-grid-area';
+    gridArea.appendChild(buildPrintGrid(showAnswers));
+    page.append(heading,gridArea);
+    pages.appendChild(page);
+  }
+
+  // Match the builder's blank-puzzle page, without its separate answer page.
+  addPrintPage(false);
+  document.body.classList.add('solver-printing');
+  window.addEventListener('afterprint',function cleanupPrint(){
+    document.body.classList.remove('solver-printing');
+    pages.replaceChildren();
+    window.removeEventListener('afterprint',cleanupPrint);
+  },{once:true});
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      window.print();
+    });
+  });
 }
 
 function fitSolverText(){document.querySelectorAll('#s-grid .clue-slot').forEach(slot=>{const t=slot.querySelector('.slot-text');if(!t)return;let fs=parseFloat(t.style.fontSize)||10,s=40;while(s-->0&&fs>4&&(slot.scrollWidth>slot.clientWidth+1||slot.scrollHeight>slot.clientHeight+1)){fs-=0.5;t.style.fontSize=fs+'px';}});}
