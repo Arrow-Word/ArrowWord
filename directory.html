@@ -12,9 +12,11 @@
 <!--
   Arrow Word Puzzles
   ══════════════════════════════════════════════════════
-  CURRENT VERSION: v20
+  CURRENT VERSION: v21
   ══════════════════════════════════════════════════════
   CHANGELOG:
+  v21 - Solver clue boxes now use the builder's clue-length proportions.
+        Solver print preserves the on-screen fitted font and line breaks.
   v20 - Merged celebration and ratings into single modal (no skip).
         Added comments field to completion modal (optional).
         Added "Report Bug / Comment" button in solver header.
@@ -368,13 +370,18 @@ function firstAnswerTarget(dir,or,oc){
   return {r:or+dr,c:oc+dc,edge};
 }
 
+function clueBoxWeight(cl){
+  const length=Math.max(1,String(cl&&cl.clue||'?').trim().length);
+  return Math.sqrt(length);
+}
+
 function getAnswerArrowMarkers(r,c,grid,baseTextPx){
   const markers=[];
   for(let or=0;or<grid.length;or++){
     for(let oc=0;oc<(grid[or]||[]).length;oc++){
       const owner=grid[or][oc];
       if(owner.t!=='clue'||!Array.isArray(owner.clues)||!owner.clues.length)continue;
-      const weights=owner.clues.map(cl=>cl.textSize&&cl.textSize>0?cl.textSize:baseTextPx);
+      const weights=owner.clues.map(clueBoxWeight);
       const total=weights.reduce((sum,value)=>sum+value,0)||owner.clues.length;
       let consumed=0;
       owner.clues.forEach((cl,index)=>{
@@ -700,7 +707,7 @@ function buildSolverGrid(data) {
           const slot=document.createElement('div');slot.className='clue-slot';
           slot.dataset.or=r;slot.dataset.oc=c;slot.dataset.ci=idx;
           const fs=cl.textSize&&cl.textSize>0?cl.textSize:tSz;
-          slot.style.flex=fs+' 1 0';
+          slot.style.flex=clueBoxWeight(cl)+' 1 0';
           slot.innerHTML=`<div class="slot-text" style="font-size:${fs}px">${escHtml(cl.clue||'?')}</div>`;
           slot.addEventListener('click',e=>{e.stopPropagation();sPickClue(+slot.dataset.or,+slot.dataset.oc,+slot.dataset.ci);});
           inner.appendChild(slot);
@@ -721,8 +728,43 @@ function buildSolverGrid(data) {
   }
 }
 
+function getRenderedSolverClueLayout(r,c,index){
+  const slot=document.querySelector(
+    '#s-grid .clue-slot[data-or="'+r+'"][data-oc="'+c+'"][data-ci="'+index+'"]'
+  );
+  const text=slot&&slot.querySelector('.slot-text');
+  if(!text||!text.clientWidth||!text.clientHeight)return null;
+  const node=text.firstChild;
+  const lines=[];
+  if(node&&node.nodeType===Node.TEXT_NODE&&node.data.length){
+    let line='',lastTop=null;
+    for(let i=0;i<node.data.length;i++){
+      const range=document.createRange();
+      range.setStart(node,i);
+      range.setEnd(node,i+1);
+      const rect=range.getBoundingClientRect();
+      if(rect.height>0&&lastTop!==null&&Math.abs(rect.top-lastTop)>1.5){
+        lines.push(line.trim());
+        line='';
+        lastTop=rect.top;
+      }else if(rect.height>0&&lastTop===null){
+        lastTop=rect.top;
+      }
+      line+=node.data[i];
+    }
+    if(line.length)lines.push(line.trim());
+  }
+  return{
+    fontSize:parseFloat(getComputedStyle(text).fontSize)||0,
+    width:text.clientWidth,
+    height:text.clientHeight,
+    lines:lines.filter(Boolean)
+  };
+}
+
 function printSolverPuzzle(){
   if(!sPrintGrid||!sPrintGrid.length||!sPrintRows||!sPrintCols){alert('There is no puzzle grid to print yet.');return;}
+  fitSolverText();
 
   const pages=document.getElementById('solver-print-pages')||document.body.appendChild(document.createElement('div'));
   pages.id='solver-print-pages';
@@ -810,10 +852,11 @@ function printSolverPuzzle(){
           const gap=clues.length>1?0.6:0;
           const usableHeight=printCellSize-gap*(clues.length-1);
           const sizes=clues.map(cl=>cl.textSize&&cl.textSize>0?cl.textSize:sPrintTextSizePx);
-          const totalSize=sizes.reduce((sum,size)=>sum+size,0)||clues.length;
+          const weights=clues.map(clueBoxWeight);
+          const totalWeight=weights.reduce((sum,weight)=>sum+weight,0)||clues.length;
           let slotY=y;
           clues.forEach((cl,index)=>{
-            const slotHeight=usableHeight*(sizes[index]/totalSize);
+            const slotHeight=usableHeight*(weights[index]/totalWeight);
             if(index>0){
               svg.appendChild(svgNode('line',{
                 x1:x+2,y1:slotY+gap/2,x2:x+printCellSize-2,y2:slotY+gap/2,
@@ -832,9 +875,19 @@ function printSolverPuzzle(){
             slot.style.cssText='width:100%;height:100%;box-sizing:border-box;display:flex;overflow:hidden;padding:1px 2px;align-items:center;justify-content:center;';
 
             const text=document.createElementNS(htmlNS,'div');
-            text.textContent=cl.clue||'?';
+            const screenLayout=getRenderedSolverClueLayout(r,c,index);
+            text.textContent=screenLayout&&screenLayout.lines.length
+              ?screenLayout.lines.join('\n')
+              :(cl.clue||'?');
             text.style.cssText='font-family:Arial,sans-serif;font-weight:600;color:#222;line-height:1.15;text-align:center;overflow:hidden;overflow-wrap:normal;word-break:normal;hyphens:none;min-width:0;min-height:0;width:100%;flex:1 1 auto;';
-            text.style.fontSize=(sizes[index]*scale)+'px';
+            if(screenLayout&&screenLayout.lines.length>1)text.style.whiteSpace='pre-line';
+            const printTextScale=screenLayout
+              ?Math.min(
+                  Math.max(1,printCellSize-inset*2-4)/screenLayout.width,
+                  Math.max(1,slotHeight-inset*2-2)/screenLayout.height
+                )
+              :scale;
+            text.style.fontSize=((screenLayout&&screenLayout.fontSize||sizes[index])*printTextScale)+'px';
             slot.appendChild(text);
             fo.appendChild(slot);
             svg.appendChild(fo);
