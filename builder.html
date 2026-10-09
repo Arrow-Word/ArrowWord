@@ -8,13 +8,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
-<title>Puzzle Builder v27 — Arrow Word Puzzles</title>
+<title>Puzzle Builder v30 — Arrow Word Puzzles</title>
 <script src="site-banner.js?v=27"></script>
 <!-- Arrow Word Puzzle Builder
      ════════════════════════════════════════════════
-     CURRENT VERSION: v27
+     CURRENT VERSION: v30
      ════════════════════════════════════════════════
      CHANGELOG:
+     v30 - Grid text now uses the Arimo font, shipped with the site, so every
+           device draws clues exactly as the builder does (Arimo has Arial's
+           letter widths). Phones no longer resize text on their own.
+           The print layout moved into grid-core.js, shared with the solver.
+           Removed the old "shrink text to fit" step, which never did anything.
+     v29 - The code and styling that draw the grid moved into two shared
+           files, grid-core.js and grid-core.css (the builder is the master
+           copy; the solver will use the same files next). No visible change.
+     v28 - Export file now downloads a small puzzle data file (.json) instead
+           of a stand-alone web page; the old export code was removed.
+           Added a Download button to each puzzle in the published list.
+           Import puzzle from file reads the new files and old exports.
      v27 - Shows a TEST SITE banner when opened from the staging address
            (site-banner.js). No change to the builder itself.
      v26 - Centered up/down arrows horizontally in their destination cells.
@@ -62,6 +74,7 @@
      v1  - Initial arrow word puzzle builder.
      ════════════════════════════════════════════════
 -->
+<link rel="stylesheet" href="grid-core.css?v=30">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;font-size:14px;color:#222;background:#f5f5f5;padding:16px}
@@ -80,48 +93,18 @@ h1{font-size:20px;font-weight:600;margin-bottom:4px;color:#333}
 .tool-btn.warn{background:#ffe0e0;color:#900;border-color:#f4a8a8}
 .tool-btn.warn:hover{background:#ffcccc}
 .grid-wrap{overflow:auto;margin-bottom:16px}
-table.puzzle{border-collapse:collapse;table-layout:fixed}
-table.puzzle td{border:1px solid #aaa;position:relative;user-select:none;padding:0;overflow:hidden}
-td.t-empty{background:#fff;cursor:pointer}
+/* The grid's look (squares, clue boxes, text, arrows) now lives in grid-core.css,
+   shared with the solver. Only the builder's own click/hover behaviour stays here. */
+td.t-empty{cursor:pointer}
 td.t-empty:hover{background:#f0f0ff}
-td.t-black{background:#333;cursor:pointer}
-td.t-clue{background:#e8e0f0;cursor:pointer}
+td.t-black{cursor:pointer}
+td.t-clue{cursor:pointer}
 td.t-clue:hover{background:#ddd0ee}
-td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:middle}
-/* clue cell layout */
-.clue-inner{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
-/* Each slot's flex-grow is based on clue length, not font size. Changing a
-   clue's font therefore never takes space away from that clue's own box. */
-.clue-slot{display:flex;flex:1 1 0;min-height:0;overflow:hidden;padding:1px 2px;position:relative;align-items:center;justify-content:center}
-/* arrow RIGHT of text (default) */
-.clue-slot.ap-right{flex-direction:row;align-items:center;justify-content:center}
-/* arrow LEFT of text */
-.clue-slot.ap-left{flex-direction:row;align-items:center;justify-content:center}
-.clue-slot.ap-left .slot-arrow{order:-1}
-/* arrow BELOW text */
-.clue-slot.ap-bottom{flex-direction:column;align-items:center;justify-content:center}
-/* arrow ABOVE text */
-.clue-slot.ap-top{flex-direction:column;align-items:center;justify-content:center}
-.clue-slot.ap-top .slot-arrow{order:-1}
+td.t-answer{cursor:default}
 .clue-slot.solve-clickable{cursor:pointer}
 .clue-slot.solve-clickable:hover{background:rgba(119,68,187,0.08)}
 .clue-slot.active-clue{background:rgba(119,68,187,0.18)}
-.slot-text{font-weight:600;color:#443366;overflow:hidden;flex:0 1 auto;line-height:1.15;text-align:center;overflow-wrap:normal;word-break:normal;hyphens:none}
-.clue-slot .slot-text{display:flex;width:100%;height:100%;flex:1 1 auto;align-items:center;justify-content:center}
-.clue-slot.ap-right .slot-text,.clue-slot.ap-left .slot-text{flex:1 1 auto}
-.slot-arrow{flex-shrink:0;display:block;line-height:0}
-.slot-arrow svg{display:block}
-.clue-divider{height:1px;background:#9966cc;opacity:0.6;flex-shrink:0;margin:0 2px}
 .fit-check-target{outline:3px solid #d43b55!important;outline-offset:1px;z-index:3}
-.ans-letter{font-weight:600;color:#222;line-height:1}
-.solve-input{width:100%;height:100%;border:none;background:transparent;text-align:center;font-weight:600;color:#222;outline:none;text-transform:uppercase;display:block;cursor:text}
-.ans-letter,.solve-input{position:relative;z-index:1}
-.answer-arrow-marker{position:absolute;display:block;width:var(--arrow-size);height:var(--arrow-size);z-index:2;pointer-events:none;line-height:0}
-.answer-arrow-marker svg{display:block;width:100%;height:100%}
-.answer-arrow-marker.edge-left{left:1px;top:var(--slot-position);transform:translateY(-50%)}
-.answer-arrow-marker.edge-right{right:1px;top:var(--slot-position);transform:translateY(-50%)}
-.answer-arrow-marker.edge-top{top:1px;left:var(--slot-position);transform:translateX(-50%)}
-.answer-arrow-marker.edge-bottom{bottom:1px;left:var(--slot-position);transform:translateX(-50%)}
 .solve-input:focus{background:#fffde0}
 .solve-input.wrong{background:#ffd0d8;color:#a01030}
 .solve-input.wrong:focus{background:#ffe0e6}
@@ -178,25 +161,7 @@ td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:m
 #modal #existing-clues{max-height:30vh;overflow-y:auto;flex-shrink:0}
 #modal .modal-btns{flex-shrink:0;background:#fff;padding-top:10px;margin-top:6px;border-top:1px solid #eee;position:sticky;bottom:0}
 #modal .modal-scroll{overflow-y:auto;flex:1 1 auto;-webkit-overflow-scrolling:touch}
-#print-pages{display:none}
-@page{size:A4 portrait;margin:0}
-@media print{
-  html,body{width:210mm!important;margin:0!important;padding:0!important;background:#fff!important}
-  body.printing>*:not(#print-pages){display:none!important}
-  body.printing #print-pages{display:block!important}
-  .print-page{
-    width:210mm;height:297mm;box-sizing:border-box;padding:12mm;
-    display:grid;grid-template-rows:auto 1fr;page-break-after:always;break-after:page;
-    overflow:hidden;background:#fff;color:#111;
-  }
-  .print-page:last-child{page-break-after:auto;break-after:auto}
-  .print-title{font:700 17pt Arial,sans-serif;text-align:center;overflow-wrap:anywhere;padding:0 0 7mm}
-  .print-grid-area{min-height:0;display:flex;align-items:center;justify-content:center}
-  .print-svg{
-    display:block;max-width:100%;max-height:100%;overflow:visible;
-    print-color-adjust:exact;-webkit-print-color-adjust:exact;
-  }
-}
+/* Print styling now lives in grid-core.css (shared with the solver). */
 </style>
 </head>
 <body>
@@ -234,7 +199,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-     title="Click for change history">v27 ▾</button>
+     title="Click for change history">v30 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
@@ -525,41 +490,15 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
   </div>
 </div>
 
+<script src="grid-core.js?v=30"></script>
 <script>
-// ── Arrow SVG ─────────────────────────────────────────────────────────────────
-function arrowSVG(dir, s) {
-  const c=s/2, m=Math.ceil(s*0.12), e=s-m;
-  const sw=Math.max(1.6, s/12);
-  const ahLarge=s*0.34, ahSmall=s*0.25;
-  function head(x,y,dx,dy,size='large'){
-    const ah = size === 'small' ? ahSmall : ahLarge;
-    const l=Math.sqrt(dx*dx+dy*dy),nx=dx/l,ny=dy/l,px=-ny,py=nx;
-    return `M${x-nx*ah+px*ah*0.45},${y-ny*ah+py*ah*0.45} L${x},${y} L${x-nx*ah-px*ah*0.45},${y-ny*ah-py*ah*0.45}`;
-  }
-  const paths={
-    right:    [`M${m},${c} L${e},${c}`,          head(e,c,1,0,'large')],
-    left:     [`M${e},${c} L${m},${c}`,          head(m,c,-1,0,'large')],
-    down:     [`M${c},${m} L${c},${e}`,          head(c,e,0,1,'large')],
-    up:       [`M${c},${e} L${c},${m}`,          head(c,m,0,-1,'large')],
-    'right-down': [`M${m},${c} L${c},${c} L${c},${1.2*e-0.2*c}`, head(c,1.2*e-0.2*c,0,1,'small')],
-    'down-right': [`M${c},${m} L${c},${c} L${1.2*e-0.2*c},${c}`, head(1.2*e-0.2*c,c,1,0,'small')],
-    'left-down':  [`M${e},${c} L${c},${c} L${c},${1.2*e-0.2*c}`, head(c,1.2*e-0.2*c,0,1,'small')],
-    'down-left':  [`M${c},${m} L${c},${c} L${1.2*m-0.2*c},${c}`, head(1.2*m-0.2*c,c,-1,0,'small')],
-    'right-up':   [`M${m},${c} L${c},${c} L${c},${1.2*m-0.2*c}`, head(c,1.2*m-0.2*c,0,-1,'small')],
-    'up-right':   [`M${c},${e} L${c},${c} L${1.2*e-0.2*c},${c}`, head(1.2*e-0.2*c,c,1,0,'small')],
-    'left-up':    [`M${e},${c} L${c},${c} L${c},${1.2*m-0.2*c}`, head(c,1.2*m-0.2*c,0,-1,'small')],
-    'up-left':    [`M${c},${e} L${c},${c} L${1.2*m-0.2*c},${c}`, head(1.2*m-0.2*c,c,-1,0,'small')],
-  };
-  const [p,a]=paths[dir]||paths.right;
-  return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg"><path d="${p}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${a}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-}
-
-function answerArrowSVG(dir,s,color='#7744bb'){
-  const thinStroke=Math.max(1,s/16);
-  return arrowSVG(dir,s)
-    .replace(/stroke-width="[^"]+"/g,`stroke-width="${thinStroke}"`)
-    .replaceAll('#7744bb',color);
-}
+// ── Shared drawing code ───────────────────────────────────────────────────────
+// v29: the code that DRAWS the grid (arrows, word layout, squares, clue boxes,
+// printing) now lives in grid-core.js, shared with the solver. The builder
+// is the master copy. The short functions below just pass the work on to it.
+if(!window.ArrowGrid){alert('The file grid-core.js could not be loaded, so the builder cannot work.\n\nPlease check that grid-core.js and grid-core.css were uploaded next to builder.html, then reload.');}
+function arrowSVG(dir,s){return ArrowGrid.arrowSVG(dir,s);}
+function answerArrowSVG(dir,s,color='#7744bb'){return ArrowGrid.answerArrowSVG(dir,s,color);}
 
 const DIRECTIONS=[
   {key:'right',     label:'Right'},
@@ -575,29 +514,6 @@ const DIRECTIONS=[
   {key:'up-right',  label:'Up\nthen Right'},
   {key:'up-left',   label:'Up\nthen Left'},
 ];
-
-const APOS={
-  right:'right', left:'left', down:'bottom', up:'top',
-  'right-down':'right',
-  'down-right':'bottom',
-  'left-down':'left',
-  'down-left':'bottom',
-  'right-up':'right',
-  'up-right':'top',
-  'left-up':'left',
-  'up-left':'top',
-};
-
-function apClass(dir,isMulti){
-  let p=APOS[dir]||'right';
-  // FIX: in multi-clue cells, top/bottom arrows steal vertical room and clip
-  // the text. Move them inline (to the right) so text gets the full slot.
-  if(isMulti && (p==='top'||p==='bottom')) p='right';
-  if(p==='left')   return 'ap-left';
-  if(p==='bottom') return 'ap-bottom';
-  if(p==='top')    return 'ap-top';
-  return 'ap-right';
-}
 
 // ── Direction picker ──────────────────────────────────────────────────────────
 function buildDirGrid(containerId, hiddenId, sz, onchange){
@@ -618,81 +534,13 @@ function buildDirGrid(containerId, hiddenId, sz, onchange){
   });
 }
 
-// ── Word placement ────────────────────────────────────────────────────────────
-// Convention: letters are placed in natural reading order
-// (left-to-right for horizontal words, top-to-bottom for vertical words)
-function getWordCells(dir,ans,or,oc){
-  const len=ans.length, cells=[];
-  if(dir==='right')     {for(let i=0;i<len;i++)cells.push([or,oc+1+i]);}
-  else if(dir==='left') {for(let i=0;i<len;i++)cells.push([or,oc-len+i]);}
-  else if(dir==='down') {for(let i=0;i<len;i++)cells.push([or+1+i,oc]);}
-  else if(dir==='up')   {for(let i=0;i<len;i++)cells.push([or-len+i,oc]);}
-  else if(dir==='right-down'){cells.push([or,oc+1]);for(let i=1;i<len;i++)cells.push([or+i,oc+1]);}
-  else if(dir==='down-right'){cells.push([or+1,oc]);for(let i=1;i<len;i++)cells.push([or+1,oc+i]);}
-  else if(dir==='left-down') {cells.push([or,oc-1]);for(let i=1;i<len;i++)cells.push([or+i,oc-1]);}
-  else if(dir==='down-left') {const t=[[or+1,oc]];for(let i=1;i<len;i++)t.push([or+1,oc-i]);t.sort((a,b)=>a[1]-b[1]);cells.push(...t);}
-  else if(dir==='right-up')  {const t=[[or,oc+1]];for(let i=1;i<len;i++)t.push([or-i,oc+1]);t.sort((a,b)=>a[0]-b[0]);cells.push(...t);}
-  else if(dir==='up-right')  {const t=[[or-1,oc]];for(let i=1;i<len;i++)t.push([or-1,oc+i]);cells.push(...t);}
-  else if(dir==='left-up')   {const t=[[or,oc-1]];for(let i=1;i<len;i++)t.push([or-i,oc-1]);t.sort((a,b)=>a[0]-b[0]);cells.push(...t);}
-  else if(dir==='up-left')   {const t=[[or-1,oc]];for(let i=1;i<len;i++)t.push([or-1,oc-i]);t.sort((a,b)=>a[1]-b[1]);cells.push(...t);}
-  return cells;
-}
-
-function firstAnswerTarget(dir,or,oc){
-  const steps={
-    right:[0,1,'left'],left:[0,-1,'right'],down:[1,0,'top'],up:[-1,0,'bottom'],
-    'right-down':[0,1,'left'],'down-right':[1,0,'top'],
-    'left-down':[0,-1,'right'],'down-left':[1,0,'top'],
-    'right-up':[0,1,'left'],'up-right':[-1,0,'bottom'],
-    'left-up':[0,-1,'right'],'up-left':[-1,0,'bottom']
-  };
-  const [dr,dc,edge]=steps[dir]||steps.right;
-  return {r:or+dr,c:oc+dc,edge};
-}
-
-function clueBoxWeight(cl){
-  const length=Math.max(1,String(cl&&cl.clue||'?').trim().length);
-  return Math.sqrt(length);
-}
-
-function getAnswerArrowMarkers(r,c,grid=G,baseTextPx=textSizePx){
-  const markers=[];
-  for(let or=0;or<grid.length;or++){
-    for(let oc=0;oc<(grid[or]||[]).length;oc++){
-      const owner=grid[or][oc];
-      if(owner.t!=='clue'||!Array.isArray(owner.clues)||!owner.clues.length)continue;
-      const weights=owner.clues.map(clueBoxWeight);
-      const total=weights.reduce((sum,value)=>sum+value,0)||owner.clues.length;
-      let consumed=0;
-      owner.clues.forEach((cl,index)=>{
-        const weight=weights[index]||1;
-        const target=firstAnswerTarget(cl.dir,or,oc);
-        if(target.r===r&&target.c===c){
-          // Up/down arrows sit on horizontal cell edges, so center them across
-          // the destination cell. Only left/right arrows follow the clue's
-          // vertical share within a split clue box.
-          const position=(target.edge==='top'||target.edge==='bottom')
-            ?50
-            :((consumed+weight/2)/total)*100;
-          markers.push({dir:cl.dir,edge:target.edge,position});
-        }
-        consumed+=weight;
-      });
-    }
-  }
-  return markers;
-}
-
+// ── Word placement / arrows (see grid-core.js) ───────────────────────────────
+function getWordCells(dir,ans,or,oc){return ArrowGrid.getWordCells(dir,ans,or,oc);}
+function firstAnswerTarget(dir,or,oc){return ArrowGrid.firstAnswerTarget(dir,or,oc);}
+function clueBoxWeight(cl){return ArrowGrid.clueBoxWeight(cl);}
+function getAnswerArrowMarkers(r,c,grid=G){return ArrowGrid.getAnswerArrowMarkers(r,c,grid);}
 function appendAnswerArrowMarkers(td,r,c,grid=G,cellPx=cellSizePx,baseTextPx=textSizePx,color='#7744bb'){
-  const markerSize=Math.max(8,Math.round(cellPx*0.25));
-  getAnswerArrowMarkers(r,c,grid,baseTextPx).forEach(marker=>{
-    const el=document.createElement('span');
-    el.className='answer-arrow-marker edge-'+marker.edge;
-    el.style.setProperty('--arrow-size',markerSize+'px');
-    el.style.setProperty('--slot-position',marker.position+'%');
-    el.innerHTML=answerArrowSVG(marker.dir,markerSize,color);
-    td.appendChild(el);
-  });
+  ArrowGrid.appendAnswerArrowMarkers(td,r,c,grid,cellPx,color);
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -751,74 +599,28 @@ function drawDesign(){
     for(let c=0;c<C;c++)tr.appendChild(makeTd(r,c,false));
     t.appendChild(tr);
   }
-  fitAllClueText('#dgrid');
   if(typeof dApplyZoom==='function')dApplyZoom();
 }
 
 function asz(){return Math.max(10,Math.round(cellSizePx*0.24));}
 
+// The square itself is drawn by grid-core.js; the builder only adds what
+// happens when it is clicked or typed in.
 function makeTd(r,c,solve){
-  const td=document.createElement('td');
-  td.dataset.r=r;td.dataset.c=c;
-  td.style.width=cellSizePx+'px';
-  td.style.height=cellSizePx+'px';
-  td.style.minWidth=cellSizePx+'px';
-  td.style.minHeight=cellSizePx+'px';
-  td.style.maxWidth=cellSizePx+'px';
-  td.style.maxHeight=cellSizePx+'px';
-  const cell=G[r][c];
-
-  if(cell.t==='black'){
-    td.className='t-black';
-    if(!solve)td.onclick=()=>cellClick(r,c);
-
-  } else if(cell.t==='clue'){
-    td.className='t-clue';
-    const inner=document.createElement('div');inner.className='clue-inner';
-    cell.clues.forEach((cl,idx)=>{
-      if(idx>0){const dv=document.createElement('div');dv.className='clue-divider';inner.appendChild(dv);}
-      const slot=document.createElement('div');
-      slot.className='clue-slot';
-      const fs=cl.textSize&&cl.textSize>0?cl.textSize:textSizePx;
-      // Give longer clue text a larger share of the cell. Keep this independent
-      // of fs so auto-fitting its font cannot make its own box smaller.
-      slot.style.flex=clueBoxWeight(cl)+' 1 0';
-      const txtDiv=document.createElement('div');txtDiv.className='slot-text';
-      txtDiv.style.fontSize=fs+'px';
-      txtDiv.textContent=cl.clue||'?';
-      slot.appendChild(txtDiv);
-      if(solve){
-        slot.classList.add('solve-clickable');
-        slot.dataset.clueIdx=idx;
-        slot.onclick=()=>focusClue(r,c,idx);
-      }
-      inner.appendChild(slot);
+  const td=ArrowGrid.buildCell({r,c,grid:G,cellSizePx,textSizePx,solve});
+  if(!solve){
+    td.onclick=()=>cellClick(r,c);
+  } else {
+    td.querySelectorAll('.clue-slot').forEach((slot,idx)=>{
+      slot.classList.add('solve-clickable');
+      slot.onclick=()=>focusClue(r,c,idx);
     });
-    td.appendChild(inner);
-    if(!solve)td.onclick=()=>cellClick(r,c);
-
-  } else if(cell.t==='answer'){
-    td.className='t-answer';
-    if(solve){
-      const inp=document.createElement('input');
-      inp.className='solve-input';inp.type='text';inp.maxLength=1;
-      inp.style.fontSize=Math.round(cellSizePx*0.38)+'px';
-      inp.dataset.r=r;inp.dataset.c=c;
+    const inp=td.querySelector('input.solve-input');
+    if(inp){
       inp.addEventListener('input',onSolveInput);
       inp.addEventListener('keydown',onSolveKeydown);
       inp.addEventListener('focus',onSolveFocus);
-      td.appendChild(inp);
-    } else {
-      const sp=document.createElement('span');sp.className='ans-letter';
-      sp.style.fontSize=Math.round(cellSizePx*0.38)+'px';
-      sp.textContent=cell.answerOf?cell.answerOf.letter:'';
-      td.appendChild(sp);
-      td.onclick=()=>cellClick(r,c);
     }
-    appendAnswerArrowMarkers(td,r,c);
-  } else {
-    td.className='t-empty';
-    if(!solve)td.onclick=()=>cellClick(r,c);
   }
   return td;
 }
@@ -829,185 +631,13 @@ function refreshTd(r,c,solve){
   if(old)old.replaceWith(makeTd(r,c,solve));
 }
 
+// The print layout is drawn by grid-core.js (shared with the solver).
 function printPuzzle(){
-  if(!G||!G.length||!R||!C){alert('There is no puzzle grid to print yet.');return;}
-
-  const pages=document.getElementById('print-pages')||document.body.appendChild(document.createElement('div'));
-  pages.id='print-pages';
-  pages.replaceChildren();
-  const pageName=(document.getElementById('puzzle-name').value||'').trim()||'Untitled puzzle';
-  const availableWidth=(210-24)/25.4*96;
-  const availableHeight=(297-24-18)/25.4*96;
-  const printCellSize=Math.min(84,availableWidth/C,availableHeight/R);
-  const scale=printCellSize/cellSizePx;
-  const svgNS='http://www.w3.org/2000/svg';
-  const htmlNS='http://www.w3.org/1999/xhtml';
-
-  function svgNode(name,attrs){
-    const node=document.createElementNS(svgNS,name);
-    Object.keys(attrs||{}).forEach(key=>node.setAttribute(key,attrs[key]));
-    return node;
-  }
-
-  function buildPrintGrid(showAnswers){
-    const width=C*printCellSize,height=R*printCellSize;
-    const svg=svgNode('svg',{
-      class:'print-svg',xmlns:svgNS,
-      width:width+'px',height:height+'px',
-      viewBox:'0 0 '+width+' '+height,
-      role:'img','aria-label':showAnswers?'Puzzle answer grid':'Blank puzzle grid'
-    });
-    svg.style.width=width+'px';
-    svg.style.height=height+'px';
-    svg.style.printColorAdjust='exact';
-    svg.style.webkitPrintColorAdjust='exact';
-
-    for(let r=0;r<R;r++){
-      for(let c=0;c<C;c++){
-        const cell=G[r][c]||fresh();
-        const x=c*printCellSize,y=r*printCellSize;
-        const fill=cell.t==='black'?'#222':cell.t==='clue'?'#eee9f2':'#fff';
-        svg.appendChild(svgNode('rect',{
-          x:x,y:y,width:printCellSize,height:printCellSize,fill:fill
-        }));
-
-        if(cell.t==='answer'&&showAnswers&&cell.answerOf&&cell.answerOf.letter){
-          const letter=svgNode('text',{
-            x:x+printCellSize/2,y:y+printCellSize/2,
-            'text-anchor':'middle','dominant-baseline':'central',
-            'font-family':'Arial, sans-serif','font-size':Math.round(cellSizePx*.38)*scale,
-            'font-weight':'600',fill:'#111'
-          });
-          letter.textContent=cell.answerOf.letter;
-          svg.appendChild(letter);
-        }
-
-        if(cell.t==='answer'){
-          const markerSize=Math.max(6,printCellSize*0.25);
-          getAnswerArrowMarkers(r,c).forEach(marker=>{
-            let markerX=x+printCellSize/2-markerSize/2;
-            let markerY=y+printCellSize/2-markerSize/2;
-            if(marker.edge==='left'){
-              markerX=x+1.5*scale;
-              markerY=y+printCellSize*marker.position/100-markerSize/2;
-            }else if(marker.edge==='right'){
-              markerX=x+printCellSize-markerSize-1.5*scale;
-              markerY=y+printCellSize*marker.position/100-markerSize/2;
-            }else if(marker.edge==='top'){
-              markerX=x+printCellSize*marker.position/100-markerSize/2;
-              markerY=y+1.5*scale;
-            }else{
-              markerX=x+printCellSize*marker.position/100-markerSize/2;
-              markerY=y+printCellSize-markerSize-1.5*scale;
-            }
-            const parsed=new DOMParser().parseFromString(
-              answerArrowSVG(marker.dir,markerSize),
-              'image/svg+xml'
-            );
-            const markerSvg=document.importNode(parsed.documentElement,true);
-            markerSvg.setAttribute('x',markerX);
-            markerSvg.setAttribute('y',markerY);
-            markerSvg.setAttribute('width',markerSize);
-            markerSvg.setAttribute('height',markerSize);
-            svg.appendChild(markerSvg);
-          });
-        }
-
-        if(cell.t==='clue'&&Array.isArray(cell.clues)&&cell.clues.length){
-          const clues=cell.clues;
-          const gap=clues.length>1?0.6:0;
-          const usableHeight=printCellSize-gap*(clues.length-1);
-          const sizes=clues.map(cl=>cl.textSize&&cl.textSize>0?cl.textSize:textSizePx);
-          const weights=clues.map(clueBoxWeight);
-          const totalWeight=weights.reduce((sum,weight)=>sum+weight,0)||clues.length;
-          let slotY=y;
-          clues.forEach((cl,index)=>{
-            const slotHeight=usableHeight*(weights[index]/totalWeight);
-            if(index>0){
-              svg.appendChild(svgNode('line',{
-                x1:x+2,y1:slotY+gap/2,x2:x+printCellSize-2,y2:slotY+gap/2,
-                stroke:'#9966cc','stroke-width':'0.7'
-              }));
-              slotY+=gap;
-            }
-
-            const inset=1;
-            const fo=svgNode('foreignObject',{
-              x:x+inset,y:slotY+inset,
-              width:Math.max(1,printCellSize-inset*2),
-              height:Math.max(1,slotHeight-inset*2)
-            });
-            const slot=document.createElementNS(htmlNS,'div');
-            slot.style.cssText='width:100%;height:100%;box-sizing:border-box;display:flex;overflow:hidden;padding:1px 2px;align-items:center;justify-content:center;';
-
-            const text=document.createElementNS(htmlNS,'div');
-            const screenLayout=getRenderedClueLayout(r,c,index);
-            text.textContent=screenLayout&&screenLayout.lines.length
-              ?screenLayout.lines.join('\n')
-              :(cl.clue||'?');
-            text.style.cssText='font-family:Arial,sans-serif;font-weight:600;color:#222;line-height:1.15;text-align:center;overflow:hidden;overflow-wrap:normal;word-break:normal;hyphens:none;min-width:0;min-height:0;width:100%;flex:1 1 auto;';
-            if(screenLayout&&screenLayout.lines.length>1)text.style.whiteSpace='pre-line';
-            const printTextScale=screenLayout
-              ?Math.min(
-                  Math.max(1,printCellSize-inset*2-4)/screenLayout.width,
-                  Math.max(1,slotHeight-inset*2-2)/screenLayout.height
-                )
-              :scale;
-            text.style.fontSize=((screenLayout&&screenLayout.fontSize||sizes[index])*printTextScale)+'px';
-            slot.appendChild(text);
-            fo.appendChild(slot);
-            svg.appendChild(fo);
-            slotY+=slotHeight;
-          });
-        }
-      }
-    }
-
-    // Draw every grid boundary once, above the cell contents. Using SVG strokes
-    // avoids browser table-border collapsing or omitted cell borders in print.
-    const lineWidth=1.1;
-    for(let c=0;c<=C;c++){
-      const x=c===0?lineWidth/2:c===C?width-lineWidth/2:c*printCellSize;
-      svg.appendChild(svgNode('line',{
-        x1:x,y1:0,x2:x,y2:height,stroke:'#222',
-        'stroke-width':lineWidth,'shape-rendering':'crispEdges'
-      }));
-    }
-    for(let r=0;r<=R;r++){
-      const y=r===0?lineWidth/2:r===R?height-lineWidth/2:r*printCellSize;
-      svg.appendChild(svgNode('line',{
-        x1:0,y1:y,x2:width,y2:y,stroke:'#222',
-        'stroke-width':lineWidth,'shape-rendering':'crispEdges'
-      }));
-    }
-    return svg;
-  }
-
-  function addPrintPage(showAnswers){
-    const page=document.createElement('section');
-    page.className='print-page';
-    const heading=document.createElement('h1');
-    heading.className='print-title';
-    heading.textContent=pageName;
-    const gridArea=document.createElement('div');
-    gridArea.className='print-grid-area';
-    gridArea.appendChild(buildPrintGrid(showAnswers));
-    page.append(heading,gridArea);
-    pages.appendChild(page);
-  }
-
-  addPrintPage(true);
-  addPrintPage(false);
-  document.body.classList.add('printing');
-  window.addEventListener('afterprint',function cleanupPrint(){
-    document.body.classList.remove('printing');
-    pages.replaceChildren();
-    window.removeEventListener('afterprint',cleanupPrint);
-  },{once:true});
-  requestAnimationFrame(function(){
-    requestAnimationFrame(function(){
-      window.print();
-    });
+  ArrowGrid.printPuzzle({
+    grid:G,rows:R,cols:C,cellSizePx,textSizePx,
+    title:document.getElementById('puzzle-name').value,
+    answerPage:true,
+    screenTable:document.getElementById('sgrid')
   });
 }
 
@@ -1519,61 +1149,10 @@ function buildSolve(){
   }
   applyProgress(prev);
   activeWord=null;
-  fitAllClueText('#sgrid');
 }
 
 // Auto-shrink clue text so it never breaks mid-word or overflows. Runs after
 // the cell is in the DOM so we can measure heights.
-function fitClueText(slot){
-  const txt=slot.querySelector('.slot-text'); if(!txt)return;
-  let fs=parseFloat(txt.style.fontSize); if(!fs)fs=10;
-  const min=4; let safety=40;
-  while(safety-->0 && fs>min && (slot.scrollWidth>slot.clientWidth+1 || slot.scrollHeight>slot.clientHeight+1)){
-    fs-=0.5;
-    txt.style.fontSize=fs+'px';
-  }
-}
-function fitAllClueText(scope){
-  const root=document.querySelector(scope)||document;
-  root.querySelectorAll('.clue-slot').forEach(fitClueText);
-}
-
-// Read the actual layout after fitClueText has made its on-screen adjustment.
-// Print uses these rendered lines and the computed size instead of restarting
-// from the stored font setting, which may be larger than the size that fits.
-function getRenderedClueLayout(r,c,index){
-  const cell=document.querySelector('#sgrid td[data-r="'+r+'"][data-c="'+c+'"]');
-  const slot=cell&&cell.querySelectorAll('.clue-slot')[index];
-  const text=slot&&slot.querySelector('.slot-text');
-  if(!text||!text.clientWidth||!text.clientHeight)return null;
-  const node=text.firstChild;
-  const lines=[];
-  if(node&&node.nodeType===Node.TEXT_NODE&&node.data.length){
-    let line='',lastTop=null;
-    for(let i=0;i<node.data.length;i++){
-      const range=document.createRange();
-      range.setStart(node,i);
-      range.setEnd(node,i+1);
-      const rect=range.getBoundingClientRect();
-      if(rect.height>0&&lastTop!==null&&Math.abs(rect.top-lastTop)>1.5){
-        lines.push(line.trim());
-        line='';
-        lastTop=rect.top;
-      }else if(rect.height>0&&lastTop===null){
-        lastTop=rect.top;
-      }
-      line+=node.data[i];
-    }
-    if(line.length)lines.push(line.trim());
-  }
-  return{
-    fontSize:parseFloat(getComputedStyle(text).fontSize)||0,
-    width:text.clientWidth,
-    height:text.clientHeight,
-    lines:lines.filter(Boolean)
-  };
-}
-
 function getInput(r,c){
   return document.querySelector('#sgrid td[data-r="'+r+'"][data-c="'+c+'"] input');
 }
@@ -1831,25 +1410,7 @@ function dataToGrid(data){
   document.getElementById('np-cols').value=C;
   if(data.cellSizePx){cellSizePx=data.cellSizePx;document.getElementById('cell-size').value=cellSizePx;document.getElementById('cell-size-val').textContent=cellSizePx+'px';}
   if(data.textSizePx){textSizePx=data.textSizePx;document.getElementById('text-size').value=textSizePx;document.getElementById('text-size-val').textContent=textSizePx+'px';}
-  G=[];
-  for(let r=0;r<R;r++){G.push([]);for(let c=0;c<C;c++)G[r].push(fresh());}
-  data.cells.forEach(cell=>{
-    if(cell.t==='black'){G[cell.r][cell.c].t='black';}
-    else if(cell.t==='clue'){
-      G[cell.r][cell.c]={t:'clue',clues:[],answerOf:null};
-      cell.clues.forEach(cl=>{
-        const clObj={clue:cl.clue,ans:cl.ans,dir:cl.dir,textSize:cl.textSize||0};
-        G[cell.r][cell.c].clues.push(clObj);
-        getWordCells(cl.dir,cl.ans,cell.r,cell.c).forEach(([ar,ac],i)=>{
-          if(ar>=0&&ar<R&&ac>=0&&ac<C){
-            const ex=G[ar][ac];
-            if(ex.t==='answer'&&ex.answerOf)ex.answerOf2={or:cell.r,oc:cell.c,cl:clObj,letter:cl.ans[i]};
-            else G[ar][ac]={t:'answer',clues:[],answerOf:{or:cell.r,oc:cell.c,cl:clObj,letter:cl.ans[i]}};
-          }
-        });
-      });
-    }
-  });
+  G=ArrowGrid.gridFromData(data);
   drawDesign();
   updatePuzzleTitle();
 }
@@ -1993,33 +1554,40 @@ function importLibrary(event){
   reader.readAsText(file);
 }
 
-function exportCurrentPuzzle(){
-  // kept for backwards compat; same as Publish
-  publishCurrentPuzzle();
+// ── Puzzle file export (v28) ──────────────────────────────────────────────────
+// Downloads one puzzle as a small data file (.json). Load it back with
+// "Import puzzle from file". Replaces the old stand-alone web page export.
+function downloadPuzzleFile(data,title){
+  if(!data||!data.rows||!data.cols||!Array.isArray(data.cells)){alert('This puzzle has no data to export.');return;}
+  const t=String(title||'').trim()||'My puzzle';
+  const file=Object.assign({},data,{title:t,type:'arrowword-puzzle',exportedAt:new Date().toISOString()});
+  const blob=new Blob([JSON.stringify(file,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=t.replace(/[^a-z0-9]/gi,'_')+'.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function publishCurrentPuzzle(){
-  const def=document.getElementById('puzzle-name').value.trim()||'My puzzle';
-  const title=prompt('Publish puzzle\n\nWhat title should appear on the puzzle and be used as the filename?',def);
-  if(title===null)return;
-  const t=(title||'').trim()||'My puzzle';
-  exportData(gridToData(),t);
-}
+// "Export file" button on a puzzle saved in this browser
 function exportSaved(i){
   const list=getSaved();if(!list[i])return;
-  const def=list[i].name||'My puzzle';
-  const title=prompt('Publish puzzle\n\nWhat title should appear on the puzzle and be used as the filename?',def);
-  if(title===null)return;
-  const t=(title||'').trim()||'My puzzle';
-  exportData(list[i].data,t);
+  downloadPuzzleFile(list[i].data,list[i].name);
 }
-
-function exportData(data,name){
-  const html=buildSolverHTML(data,name);
-  const blob=new Blob([html],{type:'text/html'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=name.replace(/[^a-z0-9]/gi,'_')+'.html';
-  a.click();
+// "Download" button on a puzzle in the published (web directory) list
+async function downloadPublishedPuzzle(id,btn){
+  const orig=btn?btn.textContent:'';
+  if(btn){btn.textContent='Downloading…';btn.disabled=true;}
+  try{
+    const entry=await cloudGetPuzzle(id);
+    if(!entry||!entry.data)throw new Error('Puzzle data not found');
+    downloadPuzzleFile(entry.data,entry.title);
+  }catch(e){
+    alert('Could not download puzzle: '+e.message);
+  }
+  if(btn){btn.textContent=orig;btn.disabled=false;}
 }
 
 function importPuzzle(event){
@@ -2037,7 +1605,7 @@ function importPuzzle(event){
         if(m){try{data=JSON.parse(m[1]);}catch{}}
       }
       if(!(data&&data.rows&&data.cols&&data.cells)){
-        alert('Could not read puzzle file.\n\nTip: only puzzles published from v6 onwards can be re-imported. Older published files don\'t carry the editable data.');
+        alert('Could not read puzzle file.\n\nTip: use a file made with the Export file or Download buttons. Old exported web pages from before v6 don\'t carry the editable data.');
         return;
       }
       if(!confirm('Load puzzle from file? Current unsaved grid will be replaced.'))return;
@@ -2052,298 +1620,6 @@ function importPuzzle(event){
     }catch{alert('Could not read puzzle file.');}
   };
   reader.readAsText(file);event.target.value='';
-}
-
-// ── Solver HTML export ────────────────────────────────────────────────────────
-function buildSolverHTML(data,title){
-  const rows=data.rows,cols=data.cols;
-  const cSz=data.cellSizePx||64,tSz=data.textSizePx||8;
-  const arSz=Math.max(10,Math.round(cSz*0.24));
-
-  const G2=[];
-  for(let r=0;r<rows;r++){G2.push([]);for(let c=0;c<cols;c++)G2[r].push({t:'empty',clues:[],answerOf:null});}
-  // store words for solver navigation
-  const words=[]; // {ownerR,ownerC,clueIdx,cells:[[r,c]],answer}
-  data.cells.forEach(cell=>{
-    if(cell.t==='black'){G2[cell.r][cell.c].t='black';}
-    else if(cell.t==='clue'){
-      G2[cell.r][cell.c]={t:'clue',clues:cell.clues.map(cl=>({...cl})),answerOf:null};
-      cell.clues.forEach((cl,ci)=>{
-        const wcells=getWordCells(cl.dir,cl.ans,cell.r,cell.c).filter(([ar,ac])=>ar>=0&&ar<rows&&ac>=0&&ac<cols);
-        words.push({or:cell.r,oc:cell.c,ci,cells:wcells,ans:cl.ans});
-        wcells.forEach(([ar,ac],i)=>{
-          if(G2[ar][ac].t==='answer')G2[ar][ac].letter2=cl.ans[i];
-          else G2[ar][ac]={t:'answer',clues:[],answerOf:{letter:cl.ans[i]}};
-        });
-      });
-    }
-  });
-
-  function eSVG(dir,s){
-    const c=s/2,m=Math.ceil(s*0.12),e=s-m,sw=Math.max(1.6,s/12),ahLarge=s*0.34,ahSmall=s*0.25;
-    function head(x,y,dx,dy,size='large'){const ah=size==='small'?ahSmall:ahLarge;const l=Math.sqrt(dx*dx+dy*dy),nx=dx/l,ny=dy/l,px=-ny,py=nx;return`M${x-nx*ah+px*ah*0.45},${y-ny*ah+py*ah*0.45} L${x},${y} L${x-nx*ah-px*ah*0.45},${y-ny*ah-py*ah*0.45}`;}
-    const paths={right:[`M${m},${c} L${e},${c}`,head(e,c,1,0,'large')],left:[`M${e},${c} L${m},${c}`,head(m,c,-1,0,'large')],down:[`M${c},${m} L${c},${e}`,head(c,e,0,1,'large')],up:[`M${c},${e} L${c},${m}`,head(c,m,0,-1,'large')],'right-down':[`M${m},${c} L${c},${c} L${c},${1.2*e-0.2*c}`,head(c,1.2*e-0.2*c,0,1,'small')],'down-right':[`M${c},${m} L${c},${c} L${1.2*e-0.2*c},${c}`,head(1.2*e-0.2*c,c,1,0,'small')],'left-down':[`M${e},${c} L${c},${c} L${c},${1.2*e-0.2*c}`,head(c,1.2*e-0.2*c,0,1,'small')],'down-left':[`M${c},${m} L${c},${c} L${1.2*m-0.2*c},${c}`,head(1.2*m-0.2*c,c,-1,0,'small')],'right-up':[`M${m},${c} L${c},${c} L${c},${1.2*m-0.2*c}`,head(c,1.2*m-0.2*c,0,-1,'small')],'up-right':[`M${c},${e} L${c},${c} L${1.2*e-0.2*c},${c}`,head(1.2*e-0.2*c,c,1,0,'small')],'left-up':[`M${e},${c} L${c},${c} L${c},${1.2*m-0.2*c}`,head(c,1.2*m-0.2*c,0,-1,'small')],'up-left':[`M${c},${e} L${c},${c} L${1.2*m-0.2*c},${c}`,head(1.2*m-0.2*c,c,-1,0,'small')]};
-    const[p,a]=paths[dir]||paths.right;
-    return`<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg"><path d="${p}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${a}" stroke="#7744bb" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  }
-
-  const EAPOS={right:'right',left:'left',down:'bottom',up:'top','right-down':'right','down-right':'bottom','left-down':'left','down-left':'bottom','right-up':'right','up-right':'top','left-up':'left','up-left':'top'};
-  function eAPC(dir,isMulti){let p=EAPOS[dir]||'right';if(isMulti&&(p==='top'||p==='bottom'))p='right';if(p==='left')return'ap-left';if(p==='bottom')return'ap-bottom';if(p==='top')return'ap-top';return'ap-right';}
-
-  const sz=`width:${cSz}px;height:${cSz}px;min-width:${cSz}px;min-height:${cSz}px;max-width:${cSz}px;max-height:${cSz}px`;
-  let tableRows='';
-  for(let r=0;r<rows;r++){
-    tableRows+='<tr>';
-    for(let c=0;c<cols;c++){
-      const cell=G2[r][c];
-      if(cell.t==='black'){tableRows+=`<td class="t-black" style="${sz}"></td>`;}
-      else if(cell.t==='clue'){
-        let inner='';
-        cell.clues.forEach((cl,idx)=>{
-          if(idx>0)inner+='<div class="clue-divider"></div>';
-          const fs=(cl.textSize&&cl.textSize>0?cl.textSize:tSz);
-          const boxWeight=clueBoxWeight(cl);
-          const txtH=`<div class="slot-text" style="font-size:${fs}px">${(cl.clue||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>`;
-          inner+=`<div class="clue-slot" data-r="${r}" data-c="${c}" data-ci="${idx}" style="flex:${boxWeight} 1 0">${txtH}</div>`;
-        });
-        tableRows+=`<td class="t-clue" style="${sz}"><div class="clue-inner">${inner}</div></td>`;
-      } else if(cell.t==='answer'){
-        const letter=cell.answerOf?cell.answerOf.letter:'';
-        const markerSize=Math.max(8,Math.round(cSz*0.25));
-        const markers=getAnswerArrowMarkers(r,c,G2,tSz).map(marker=>
-          `<span class="answer-arrow-marker edge-${marker.edge}" style="--arrow-size:${markerSize}px;--slot-position:${marker.position}%">${answerArrowSVG(marker.dir,markerSize)}</span>`
-        ).join('');
-        tableRows+=`<td class="t-answer" data-ans="${letter}" data-r="${r}" data-c="${c}" style="${sz}">${markers}<input class="solve-input" type="text" maxlength="1" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text" data-r="${r}" data-c="${c}" style="font-size:${Math.round(cSz*0.38)}px"></td>`;
-      } else {
-        tableRows+=`<td class="t-empty" style="${sz}"></td>`;
-      }
-    }
-    tableRows+='</tr>';
-  }
-
-  const safeTitle=title.replace(/&/g,'&amp;').replace(/</g,'&lt;');
-  const wordsJSON=JSON.stringify(words);
-  // Embed the original puzzle data so the published file can be re-imported
-  // back into the builder for editing.
-  const puzzleDataJSON=JSON.stringify(data).replace(/<\//g,'<\\/');
-
-  return`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
-<link rel="icon" type="image/png" href="favicon.png">
-<link rel="apple-touch-icon" href="favicon.png">
-<title>${safeTitle}</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%}
-body{font-family:Arial,sans-serif;font-size:14px;background:#f5f5f5;padding:16px;-webkit-text-size-adjust:100%}
-h1{font-size:20px;font-weight:600;margin-bottom:4px;word-break:break-word}
-.subtitle{font-size:12px;color:#777;margin-bottom:16px}
-.toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-button{padding:8px 14px;font-size:14px;cursor:pointer;border:1px solid #bbb;border-radius:5px;background:#fff;min-height:40px}
-button:hover{background:#eee}
-button.green{background:#d4f0d4;color:#1a6e1a;border-color:#7bc07b}
-button.warn{background:#ffe0e0;color:#900;border-color:#f4a8a8}
-.grid-wrap{overflow:auto;-webkit-overflow-scrolling:touch;margin-bottom:14px;border:1px solid #e0e0e0;background:#fff;border-radius:6px;padding:6px}
-table.puzzle{border-collapse:collapse;table-layout:fixed;margin:0 auto}
-table.puzzle td{border:1px solid #aaa;position:relative;padding:0;overflow:hidden;vertical-align:top}
-td.t-empty{background:#fff}
-td.t-black{background:#333}
-td.t-clue{background:#e8e0f0}
-td.t-answer{background:#eaf5e4;vertical-align:middle;text-align:center}
-.answer-arrow-marker{position:absolute;display:block;width:var(--arrow-size);height:var(--arrow-size);z-index:2;pointer-events:none;line-height:0}
-.answer-arrow-marker svg{display:block;width:100%;height:100%}
-.answer-arrow-marker.edge-left{left:1px;top:var(--slot-position);transform:translateY(-50%)}
-.answer-arrow-marker.edge-right{right:1px;top:var(--slot-position);transform:translateY(-50%)}
-.answer-arrow-marker.edge-top{top:1px;left:var(--slot-position);transform:translateX(-50%)}
-.answer-arrow-marker.edge-bottom{bottom:1px;left:var(--slot-position);transform:translateX(-50%)}
-.clue-inner{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
-.clue-slot{display:flex;flex:1 1 0;min-height:0;overflow:hidden;padding:1px 2px;cursor:pointer;align-items:center;justify-content:center}
-.clue-slot:hover{background:rgba(119,68,187,0.08)}
-.clue-slot.active-clue{background:rgba(119,68,187,0.18)}
-.clue-slot.ap-right{flex-direction:row;align-items:center;justify-content:center}
-.clue-slot.ap-left{flex-direction:row;align-items:center;justify-content:center}
-.clue-slot.ap-left .slot-arrow{order:-1}
-.clue-slot.ap-bottom{flex-direction:column;align-items:center;justify-content:center}
-.clue-slot.ap-top{flex-direction:column;align-items:center;justify-content:center}
-.clue-slot.ap-top .slot-arrow{order:-1}
-.slot-text{display:flex;align-items:center;justify-content:center;font-weight:600;color:#443366;overflow:hidden;flex:1 1 auto;width:100%;line-height:1.15;text-align:center;overflow-wrap:normal;word-break:normal;hyphens:none}
-.clue-slot.ap-right .slot-text,.clue-slot.ap-left .slot-text{flex:1 1 auto}
-.slot-arrow{flex-shrink:0;display:block;line-height:0}
-.slot-arrow svg{display:block}
-.clue-divider{height:1px;background:#9966cc;opacity:0.6;flex-shrink:0;margin:0 2px}
- .solve-input{position:relative;z-index:1;width:100%;height:100%;border:none;background:transparent;text-align:center;font-weight:600;color:#222;outline:none;text-transform:uppercase;display:block;cursor:text}
-.solve-input:focus{background:#fffde0}
-.solve-input.wrong{background:#ffd0d8;color:#a01030}
-.solve-input.wrong:focus{background:#ffe0e6}
-.solve-input.in-active-word{background:#fff5b8}
-.solve-input.in-active-word:focus,.solve-input.active-cell{background:#ffe680}
-@media print{
-  .toolbar,.zoom-bar{display:none!important}
-  body{background:#fff;padding:0}
-  td.t-answer{background:#fff!important}
-  td.t-clue{background:#e8e0f0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  td.t-black{background:#333!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .solve-input{display:none}
-  #zoom-wrap{transform:none!important;width:auto!important;height:auto!important}
-  .grid-wrap{overflow:visible!important;border:none!important;padding:0!important}
-}
-</style>
-</head>
-<body>
-<h1>${safeTitle}</h1>
-<p class="subtitle">Click a clue to jump to its answer cells. Type letters; the cursor moves automatically.</p>
-<div class="toolbar">
-  <button class="green" onclick="window.print()">🖨 Print blank puzzle</button>
-  <button onclick="checkAnswers()">Check answers</button>
-  <button onclick="confirmReveal()">Reveal answers</button>
-  <button class="warn" onclick="confirmClear()">Clear answers</button>
-</div>
-<div class="zoom-bar" style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-  <span style="font-size:12px;color:#666">Zoom:</span>
-  <button onclick="zoomBy(-0.15)" style="min-width:38px;padding:6px 10px">−</button>
-  <button onclick="setZoom(1)" style="padding:6px 10px">100%</button>
-  <button onclick="zoomBy(0.15)" style="min-width:38px;padding:6px 10px">+</button>
-  <button onclick="zoomFit()" style="padding:6px 10px">Fit width</button>
-  <span id="zoom-val" style="font-size:12px;color:#666;margin-left:4px">100%</span>
-</div>
-<div id="progress-banner" class="no-print" style="display:none;background:#fff5b8;border:1px solid #e6c870;color:#7a5500;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:13px;align-items:center;gap:10px;flex-wrap:wrap">
-  <span>📌 Saved progress for this puzzle was loaded from your browser.</span>
-  <button onclick="clearSavedProgress()" style="background:#fff;border:1px solid #b88; color:#7a3030;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px">Start fresh</button>
-</div>
-<div class="grid-wrap"><div id="zoom-wrap" style="transform-origin:top left;display:inline-block"><table class="puzzle">${tableRows}</table></div></div>
-<script id="puzzle-data" type="application/json">${puzzleDataJSON}<\/script>
-<div id="celebrate" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center;padding:16px"><div style="background:#fff;border-radius:10px;padding:24px;width:380px;max-width:97vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.2)"><div style="font-size:48px;line-height:1;margin-bottom:8px">🎉</div><h2 style="font-size:20px;color:#1a6e1a;margin-bottom:8px">Puzzle complete!</h2><p style="font-size:14px;color:#444;margin-bottom:16px">Every letter is correct. Well done!</p><button class="green" onclick="document.getElementById('celebrate').style.display='none'">Close</button></div></div>
-<script>
-const WORDS=${wordsJSON};
-let active=null;
-let curZoom=1;
-function applyZoom(){var w=document.getElementById('zoom-wrap');if(w)w.style.transform='scale('+curZoom+')';var v=document.getElementById('zoom-val');if(v)v.textContent=Math.round(curZoom*100)+'%';var tbl=document.querySelector('.puzzle');if(tbl&&w){var tw=tbl.offsetWidth,th=tbl.offsetHeight;if(tw>0&&th>0){w.style.width=(tw*curZoom)+'px';w.style.height=(th*curZoom)+'px';}else{w.style.width='';w.style.height='';}}}
-// FIX v12: defer initial zoom/fit until layout has actually happened, otherwise
-// in some browsers (notably Chrome on PC in fullscreen) the table is measured
-// as 0×0 at script time and the wrap collapses, hiding the whole puzzle.
-function __initLayout(){fitAll();applyZoom();}
-function setZoom(z){curZoom=Math.max(0.25,Math.min(3,z));applyZoom();}
-function zoomBy(d){setZoom(curZoom+d);}
-function zoomFit(){var wrap=document.querySelector('.grid-wrap');var tbl=document.querySelector('.puzzle');if(!wrap||!tbl)return;var avail=wrap.clientWidth-16;setZoom(Math.min(1,avail/tbl.offsetWidth));}
-function fitSlot(slot){var t=slot.querySelector('.slot-text');if(!t)return;var fs=parseFloat(t.style.fontSize)||10;var s=40;while(s-->0&&fs>4&&(slot.scrollWidth>slot.clientWidth+1||slot.scrollHeight>slot.clientHeight+1)){fs-=0.5;t.style.fontSize=fs+'px';}}
-function fitAll(){document.querySelectorAll('.clue-slot').forEach(fitSlot);}
-function maybeCelebrate(){var inputs=document.querySelectorAll('td[data-ans] input');if(!inputs.length)return;var anyFilled=false;for(var i=0;i<inputs.length;i++){var want=inputs[i].closest('td').dataset.ans;var got=(inputs[i].value||'').toUpperCase();if(!got||got!==want)return;anyFilled=true;}if(!anyFilled)return;if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();active=null;document.querySelectorAll('.solve-input').forEach(function(i){i.classList.remove('in-active-word');i.classList.remove('active-cell');i.classList.remove('wrong');});document.querySelectorAll('.clue-slot').forEach(function(s){s.classList.remove('active-clue');});document.getElementById('celebrate').style.display='flex';}
-function getInp(r,c){return document.querySelector('input.solve-input[data-r="'+r+'"][data-c="'+c+'"]');}
-function highlight(){
-  document.querySelectorAll('.solve-input').forEach(i=>{i.classList.remove('in-active-word');i.classList.remove('active-cell');});
-  document.querySelectorAll('.clue-slot').forEach(s=>s.classList.remove('active-clue'));
-  if(!active)return;
-  active.cells.forEach(([r,c],i)=>{const inp=getInp(r,c);if(inp){inp.classList.add('in-active-word');if(i===active.idx)inp.classList.add('active-cell');}});
-  const slot=document.querySelector('.clue-slot[data-r="'+active.or+'"][data-c="'+active.oc+'"][data-ci="'+active.ci+'"]');
-  if(slot)slot.classList.add('active-clue');
-}
-function pickClue(or,oc,ci){
-  const w=WORDS.find(x=>x.or===or&&x.oc===oc&&x.ci===ci);if(!w)return;
-  active={or,oc,ci,cells:w.cells,ans:w.ans,idx:0};
-  highlight();
-  const [r,c]=w.cells[0];const inp=getInp(r,c);if(inp){inp.focus();inp.select();}
-}
-document.querySelectorAll('.clue-slot').forEach(s=>{
-  s.addEventListener('click',()=>pickClue(parseInt(s.dataset.r),parseInt(s.dataset.c),parseInt(s.dataset.ci)));
-});
-document.querySelectorAll('.solve-input').forEach(inp=>{
-  inp.addEventListener('focus',e=>{
-    inp.classList.remove('wrong');
-    const r=parseInt(inp.dataset.r),c=parseInt(inp.dataset.c);
-    if(active){const i=active.cells.findIndex(([a,b])=>a===r&&b===c);if(i>=0){active.idx=i;highlight();return;}}
-    const w=WORDS.find(x=>x.cells.some(([a,b])=>a===r&&b===c));
-    if(w){active={or:w.or,oc:w.oc,ci:w.ci,cells:w.cells,ans:w.ans,idx:w.cells.findIndex(([a,b])=>a===r&&b===c)};highlight();}
-  });
-  inp.addEventListener('input',e=>{
-    const v=(inp.value||'').slice(-1).toUpperCase().replace(/[^A-Z]/,'');
-    inp.value=v;inp.classList.remove('wrong');
-    if(v && active){
-      if(active.idx+1<active.cells.length){active.idx++;const [nr,nc]=active.cells[active.idx];const ni=getInp(nr,nc);if(ni){ni.focus();ni.select();}}
-      else highlight();
-    }
-    maybeCelebrate();
-  });
-  inp.addEventListener('keydown',e=>{
-    if(e.key==='Backspace' && !inp.value && active && active.idx>0){
-      e.preventDefault();active.idx--;const [pr,pc]=active.cells[active.idx];const pi=getInp(pr,pc);if(pi){pi.value='';pi.classList.remove('wrong');pi.focus();pi.select();}
-    } else if((e.key==='ArrowRight'||e.key==='ArrowDown') && active && active.idx<active.cells.length-1){
-      e.preventDefault();active.idx++;const [nr,nc]=active.cells[active.idx];const ni=getInp(nr,nc);if(ni){ni.focus();ni.select();}
-    } else if((e.key==='ArrowLeft'||e.key==='ArrowUp') && active && active.idx>0){
-      e.preventDefault();active.idx--;const [pr,pc]=active.cells[active.idx];const pi=getInp(pr,pc);if(pi){pi.focus();pi.select();}
-    }
-  });
-});
-function progressKey(){return 'arrowword_solver_progress_'+document.title;}
-function saveProgress(silent){
-  const o={};document.querySelectorAll('.solve-input').forEach(i=>{if(i.value)o[i.dataset.r+','+i.dataset.c]=i.value;});
-  localStorage.setItem(progressKey(),JSON.stringify(o));
-  if(!silent)alert('Progress saved in this browser.');
-}
-function loadProgress(){
-  try{
-    const o=JSON.parse(localStorage.getItem(progressKey())||'{}');
-    let any=false;
-    Object.keys(o).forEach(k=>{const [r,c]=k.split(',');const inp=getInp(parseInt(r),parseInt(c));if(inp){inp.value=o[k];any=true;}});
-    if(any){var b=document.getElementById('progress-banner');if(b)b.style.display='flex';}
-  }catch(e){}
-}
-function clearSavedProgress(){
-  if(!confirm('Clear all saved letters for this puzzle and start fresh?'))return;
-  localStorage.removeItem(progressKey());
-  document.querySelectorAll('.solve-input').forEach(i=>{i.value='';i.classList.remove('wrong');});
-  var b=document.getElementById('progress-banner');if(b)b.style.display='none';
-}
-function confirmReveal(){
-  if(!confirm('Reveal all answers? Save your progress first if you want to come back to it.'))return;
-  if(confirm('Save your current progress before revealing?'))saveProgress(true);
-  document.querySelectorAll('td[data-ans] input').forEach(inp=>{const a=inp.closest('td').dataset.ans;if(a){inp.value=a;inp.classList.remove('wrong');}});
-}
-function confirmClear(){
-  if(!confirm('Clear all answers? This cannot be undone.'))return;
-  if(confirm('Save your current progress before clearing?'))saveProgress(true);
-  document.querySelectorAll('.solve-input').forEach(i=>{i.value='';i.classList.remove('wrong');});
-}
-function checkAnswers(){
-  let wrong=0,filled=0,correct=0;
-  document.querySelectorAll('td[data-ans] input').forEach(inp=>{
-    const want=inp.closest('td').dataset.ans;const got=(inp.value||'').toUpperCase();
-    if(!got){inp.classList.remove('wrong');return;}
-    filled++;if(got!==want){inp.classList.add('wrong');wrong++;}else{inp.classList.remove('wrong');correct++;}
-  });
-  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
-  active=null;document.querySelectorAll('.solve-input').forEach(i=>{i.classList.remove('in-active-word');i.classList.remove('active-cell');});
-  document.querySelectorAll('.clue-slot').forEach(s=>s.classList.remove('active-clue'));
-  if(filled===0)alert('No letters typed yet.');else alert('Checked: '+correct+' correct, '+wrong+' wrong (out of '+filled+' typed). Wrong cells are highlighted in pink.');
-}
-loadProgress();
-// FIX v12: run the initial layout AFTER the browser has had a chance to lay
-// out the grid. Doing it synchronously here was unreliable on Chrome (PC) in
-// fullscreen — the table reported 0×0 width/height and the puzzle disappeared
-// until the user toggled fullscreen (which fired a resize and re-fitted).
-function __scheduleInit(){
-  // Two rAFs gives the layout engine a full paint cycle in every browser.
-  requestAnimationFrame(function(){
-    requestAnimationFrame(function(){
-      __initLayout();
-      // Belt-and-braces: re-run once more after fonts/SVG are settled.
-      setTimeout(__initLayout,120);
-    });
-  });
-}
-if(document.readyState==='complete')__scheduleInit();
-else window.addEventListener('load',__scheduleInit);
-window.addEventListener('resize',function(){clearTimeout(window.__rzt);window.__rzt=setTimeout(__initLayout,150);});
-maybeCelebrate();
-<\/script>
-<div class="toolbar" style="margin-top:10px"><button onclick="saveProgress()">💾 Save progress in this browser</button></div>
-</body>
-</html>`;
 }
 
 // ── Auto-save draft (silent, every change) ────────────────────────────────────
@@ -2437,7 +1713,6 @@ function openQuickTest(){
     sgrid.appendChild(tr);
   }
   activeWord=null;
-  fitAllClueText('#sgrid');
 
   qtZoom=1;
   document.getElementById('quicktest-modal').classList.add('open');
@@ -2460,7 +1735,6 @@ function closeQuickTest(){
   if(qtSavedSolveSnapshot)applyProgress(qtSavedSolveSnapshot);
   qtSavedSolveSnapshot=null;
   activeWord=null;
-  fitAllClueText('#sgrid');
 
   // Reset transform on the host wrap so it doesn't affect future opens
   const w=document.getElementById('qt-zoom-wrap');
@@ -2643,6 +1917,9 @@ const CHANGELOG=[
 function openChangelog(){
   const body=document.getElementById('changelog-body');
   const log=[
+    {v:'v30',notes:['Clue text and answer letters now use a font that is shipped with the site (Arimo, which has the same letter widths as Arial). Solvers on every phone, tablet and computer now see your clues wrapped exactly as you see them here. The solver and both printouts now use the very same drawing code as the builder.']},
+    {v:'v29',notes:['Behind the scenes: the code that draws the puzzle grid now lives in shared files (grid-core.js and grid-core.css) that the solver will also use, so builder and solver can never drift apart. Nothing looks or works differently.']},
+    {v:'v28',notes:['Export file now downloads a small puzzle data file (.json) that you load back with Import puzzle from file. The old stand-alone web page export has been removed. Each puzzle in the published list has a new ⬇️ Download button to save it to your computer.']},
     {v:'v27',notes:['A TEST SITE banner now appears when the builder is opened from the staging (test) address. Nothing changes on the live site.']},
     {v:'v26',notes:['Up/down arrows are centered horizontally in their destination cells. Builder display, print, and exported puzzle use the corrected arrow positions.']},
     {v:'v25',notes:['Print now uses the fitted on-screen clue font size and preserves its line breaks, so clue text keeps the same layout instead of rewrapping or clipping.']},
@@ -2772,6 +2049,7 @@ function renderPublishedList() {
       <span style="font-size:11px;color:#aaa">${p.publishedAt||''}</span>
       ${p.cols&&p.rows?'<span style="font-size:11px;color:#888;background:#f0ecff;padding:1px 8px;border-radius:4px">'+p.cols+'×'+p.rows+'</span>':''}
       <button class="tool-btn" style="font-size:11px;padding:3px 10px" onclick="loadPublishedPuzzle('${p.id}')">📥 Load &amp; edit</button>
+      <button class="tool-btn green" style="font-size:11px;padding:3px 10px" onclick="downloadPublishedPuzzle('${p.id}',this)">⬇️ Download</button>
     </div>`).join('');
 }
 
@@ -2846,7 +2124,7 @@ enableGridPinchZoom('#tab-design .grid-wrap', function(){return dZoom;}, dSetZoo
 window.addEventListener('beforeunload',function(){if(_draftTimer){clearTimeout(_draftTimer);saveDraftNow();}});
 window.addEventListener('resize',function(){
   clearTimeout(window.__rzt);
-  window.__rzt=setTimeout(function(){fitAllClueText('#dgrid');fitAllClueText('#sgrid');dApplyZoom();},150);
+  window.__rzt=setTimeout(function(){dApplyZoom();},150);
 });
 </script>
 </body>

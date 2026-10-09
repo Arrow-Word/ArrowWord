@@ -1,0 +1,77 @@
+/* grid-core.css — v30
+   ══════════════════════════════════════════════════════════════════════════
+   The ONE shared look of an Arrow Word puzzle grid: squares, clue boxes,
+   clue text, answer squares and the small arrows.
+   These rules were moved here, unchanged, from builder.html (the builder is
+   the master copy). Change the grid's look HERE, not in the pages.
+   v30 - Now used by solver.html as well as builder.html.
+         Grid text uses the Arimo font, shipped with the site, so every
+         device draws clues the same way (Arimo has Arial's letter widths).
+         Phones no longer resize page text on their own.
+         The print styling moved here too.
+   v29 - First version. Used by builder.html.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Font: shipped with the site, so it is the same on every device ───────── */
+@font-face{
+  font-family:'Arimo';font-style:normal;font-weight:600 700;font-display:block;
+  src:url('arimo-bold.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+/* Less common accented letters; only downloaded if a puzzle uses them. */
+@font-face{
+  font-family:'Arimo';font-style:normal;font-weight:600 700;font-display:block;
+  src:url('arimo-bold-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+/* Stop phones and tablets from enlarging or shrinking text on their own. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+
+/* ── The grid ─────────────────────────────────────────────────────────────── */
+/* The base text settings are fixed here so the grid never picks up different
+   ones from whichever page it sits in. */
+table.puzzle{border-collapse:collapse;table-layout:fixed;font-family:Arimo,Arial,sans-serif;font-size:14px;font-weight:400;font-style:normal;line-height:normal;letter-spacing:normal;word-spacing:normal;text-transform:none;color:#222}
+table.puzzle td{border:1px solid #aaa;position:relative;user-select:none;padding:0;overflow:hidden}
+td.t-empty{background:#fff}
+td.t-black{background:#333}
+td.t-clue{background:#e8e0f0}
+td.t-answer{background:#eaf5e4;text-align:center;vertical-align:middle}
+/* clue cell layout */
+.clue-inner{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
+/* Each slot's flex-grow is based on clue length, not font size. Changing a
+   clue's font therefore never takes space away from that clue's own box. */
+.clue-slot{display:flex;flex:1 1 0;min-height:0;overflow:hidden;padding:1px 2px;position:relative;align-items:center;justify-content:center}
+.slot-text{font-weight:600;color:#443366;overflow:hidden;flex:0 1 auto;line-height:1.15;text-align:center;overflow-wrap:normal;word-break:normal;hyphens:none}
+.clue-slot .slot-text{display:flex;width:100%;height:100%;flex:1 1 auto;align-items:center;justify-content:center}
+.clue-divider{height:1px;background:#9966cc;opacity:0.6;flex-shrink:0;margin:0 2px}
+.ans-letter{font-weight:600;color:#222;line-height:1}
+.solve-input{font-family:inherit;width:100%;height:100%;border:none;background:transparent;text-align:center;font-weight:600;color:#222;outline:none;text-transform:uppercase;display:block;cursor:text}
+.ans-letter,.solve-input{position:relative;z-index:1}
+.answer-arrow-marker{position:absolute;display:block;width:var(--arrow-size);height:var(--arrow-size);z-index:2;pointer-events:none;line-height:0}
+.answer-arrow-marker svg{display:block;width:100%;height:100%}
+.answer-arrow-marker.edge-left{left:1px;top:var(--slot-position);transform:translateY(-50%)}
+.answer-arrow-marker.edge-right{right:1px;top:var(--slot-position);transform:translateY(-50%)}
+.answer-arrow-marker.edge-top{top:1px;left:var(--slot-position);transform:translateX(-50%)}
+.answer-arrow-marker.edge-bottom{bottom:1px;left:var(--slot-position);transform:translateX(-50%)}
+
+/* ── Printing (A4) ────────────────────────────────────────────────────────── */
+#ag-print-pages{display:none}
+@page{size:A4 portrait;margin:0}
+@media print{
+  html,body{width:210mm!important;margin:0!important;padding:0!important;background:#fff!important}
+  body.ag-printing>*:not(#ag-print-pages){display:none!important}
+  body.ag-printing #ag-print-pages{display:block!important}
+  .print-page{
+    width:210mm;height:297mm;box-sizing:border-box;padding:12mm;
+    display:grid;grid-template-rows:auto 1fr;page-break-after:always;break-after:page;
+    overflow:hidden;background:#fff;color:#111;
+  }
+  .print-page:last-child{page-break-after:auto;break-after:auto}
+  .print-title{font:700 17pt Arimo,Arial,sans-serif;text-align:center;overflow-wrap:anywhere;padding:0 0 7mm}
+  .print-grid-area{min-height:0;display:flex;align-items:center;justify-content:center}
+  .print-svg{
+    display:block;max-width:100%;max-height:100%;overflow:visible;
+    print-color-adjust:exact;-webkit-print-color-adjust:exact;
+  }
+}
