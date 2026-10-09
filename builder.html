@@ -8,12 +8,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
-<title>Puzzle Builder v25 — Arrow Word Puzzles</title>
+<title>Puzzle Builder v26 — Arrow Word Puzzles</title>
 <!-- Arrow Word Puzzle Builder
      ════════════════════════════════════════════════
-     CURRENT VERSION: v25
+     CURRENT VERSION: v26
      ════════════════════════════════════════════════
      CHANGELOG:
+     v26 - Centered up/down arrows horizontally in their destination cells.
+           Screen, print, and exported puzzle layouts use the same positions.
      v25 - Print now carries over the fitted on-screen font size and line
            breaks, preventing clues from rewrapping or clipping on paper.
      v24 - Added Publish to the Web beside Quicksave on the Design Grid tab.
@@ -229,7 +231,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-    title="Click for change history">v25 ▾</button>
+     title="Click for change history">v26 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
@@ -663,7 +665,13 @@ function getAnswerArrowMarkers(r,c,grid=G,baseTextPx=textSizePx){
         const weight=weights[index]||1;
         const target=firstAnswerTarget(cl.dir,or,oc);
         if(target.r===r&&target.c===c){
-          markers.push({dir:cl.dir,edge:target.edge,position:((consumed+weight/2)/total)*100});
+          // Up/down arrows sit on horizontal cell edges, so center them across
+          // the destination cell. Only left/right arrows follow the clue's
+          // vertical share within a split clue box.
+          const position=(target.edge==='top'||target.edge==='bottom')
+            ?50
+            :((consumed+weight/2)/total)*100;
+          markers.push({dir:cl.dir,edge:target.edge,position});
         }
         consumed+=weight;
       });
@@ -2632,6 +2640,7 @@ const CHANGELOG=[
 function openChangelog(){
   const body=document.getElementById('changelog-body');
   const log=[
+    {v:'v26',notes:['Up/down arrows are centered horizontally in their destination cells. Builder display, print, and exported puzzle use the corrected arrow positions.']},
     {v:'v25',notes:['Print now uses the fitted on-screen clue font size and preserves its line breaks, so clue text keeps the same layout instead of rewrapping or clipping.']},
     {v:'v24',notes:['Added a 🌐 Publish to the Web button beside Quicksave on the Design Grid tab. It publishes the current edited puzzle to the public directory.']},
     {v:'v23',notes:['Print and exported solver layouts now use the same clue-text-based box shares as the builder. Fitted font sizes are preserved through the local save/load path.']},

@@ -12,9 +12,11 @@
 <!--
   Arrow Word Puzzles
   ══════════════════════════════════════════════════════
-  CURRENT VERSION: v21
+  CURRENT VERSION: v22
   ══════════════════════════════════════════════════════
   CHANGELOG:
+  v22 - Up/down arrows are horizontally centered in the answer cell.
+        Builder and solver screens and printouts now share the same alignment.
   v21 - Solver clue boxes now use the builder's clue-length proportions.
         Solver print preserves the on-screen fitted font and line breaks.
   v20 - Merged celebration and ratings into single modal (no skip).
@@ -387,8 +389,14 @@ function getAnswerArrowMarkers(r,c,grid,baseTextPx){
       owner.clues.forEach((cl,index)=>{
         const weight=weights[index]||1;
         const target=firstAnswerTarget(cl.dir,or,oc);
-        if(target.r===r&&target.c===c){
-          markers.push({dir:cl.dir,edge:target.edge,position:((consumed+weight/2)/total)*100});
+    if(target.r===r&&target.c===c){
+      // Up/down arrows sit on horizontal cell edges, so center them across
+      // the destination cell. Only left/right arrows follow the clue's
+      // vertical share within a split clue box.
+      const position=(target.edge==='top'||target.edge==='bottom')
+        ?50
+        :((consumed+weight/2)/total)*100;
+      markers.push({dir:cl.dir,edge:target.edge,position});
         }
         consumed+=weight;
       });
