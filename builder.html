@@ -8,12 +8,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
-<title>Puzzle Builder v26 — Arrow Word Puzzles</title>
+<title>Puzzle Builder v27 — Arrow Word Puzzles</title>
+<script src="site-banner.js?v=27"></script>
 <!-- Arrow Word Puzzle Builder
      ════════════════════════════════════════════════
-     CURRENT VERSION: v26
+     CURRENT VERSION: v27
      ════════════════════════════════════════════════
      CHANGELOG:
+     v27 - Shows a TEST SITE banner when opened from the staging address
+           (site-banner.js). No change to the builder itself.
      v26 - Centered up/down arrows horizontally in their destination cells.
            Screen, print, and exported puzzle layouts use the same positions.
      v25 - Print now carries over the fitted on-screen font size and line
@@ -231,7 +234,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-     title="Click for change history">v26 ▾</button>
+     title="Click for change history">v27 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
@@ -2640,6 +2643,7 @@ const CHANGELOG=[
 function openChangelog(){
   const body=document.getElementById('changelog-body');
   const log=[
+    {v:'v27',notes:['A TEST SITE banner now appears when the builder is opened from the staging (test) address. Nothing changes on the live site.']},
     {v:'v26',notes:['Up/down arrows are centered horizontally in their destination cells. Builder display, print, and exported puzzle use the corrected arrow positions.']},
     {v:'v25',notes:['Print now uses the fitted on-screen clue font size and preserves its line breaks, so clue text keeps the same layout instead of rewrapping or clipping.']},
     {v:'v24',notes:['Added a 🌐 Publish to the Web button beside Quicksave on the Design Grid tab. It publishes the current edited puzzle to the public directory.']},
