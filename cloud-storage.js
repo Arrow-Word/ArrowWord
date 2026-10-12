@@ -1,26 +1,48 @@
-// cloud-storage.js — v19.2
-// Puzzle storage via Supabase — no tokens needed, works on any device
+// cloud-storage.js — v32
+// v32 - Publishing, changing and deleting puzzles are now done as the signed-in
+//       person (when the page has supabase-auth.js), so the database can check
+//       they are a builder. A change the database refuses now shows a clear
+//       message instead of looking as if it worked.
+//       Added cloudRenamePuzzle(): renames a puzzle and keeps its identity, so
+//       solvers' progress stays attached to it.
+// Puzzle storage via Supabase — no tokens needed, works on any device.
+// v31 - Removed two unused functions, including cloudSavePuzzles, an old
+//       "delete every puzzle and re-add them" routine nothing called any more.
 
 const SUPABASE_URL  = 'https://bfpoiewwvtdczkmoqlye.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmcG9pZXd3dnRkY3prbW9xbHllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODAxMTUsImV4cCI6MjA5MzQ1NjExNX0.EoIz2o7xg69tfAnSOp5wVusjc71s0cOmsEoSDwaxjso';
 const SB_PUZZLES    = SUPABASE_URL + '/rest/v1/puzzles';
 const SB_HEADERS    = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
 
+// Headers for changes: as the signed-in person if there is one.
+async function _sbWriteHeaders() {
+  const headers = Object.assign({}, SB_HEADERS);
+  try {
+    if (typeof sbGetAccessToken === 'function') {
+      const token = await sbGetAccessToken();
+      if (token) headers.Authorization = 'Bearer ' + token;
+    }
+  } catch (e) {}
+  return headers;
+}
+
+const SB_REFUSED = 'The database did not accept this change. Please make sure you are signed in with a builder or admin account.';
+
+// Checks the answer to a change. The database answers a refused change to an
+// existing puzzle with an empty list rather than an error, so treat that as refused.
+async function _sbCheckWrite(res, what) {
+  if (res.status === 401 || res.status === 403) throw new Error(SB_REFUSED);
+  if (!res.ok) throw new Error(what + ' error ' + res.status);
+  let rows = null;
+  try { rows = await res.json(); } catch (e) {}
+  if (Array.isArray(rows) && rows.length === 0) throw new Error(SB_REFUSED);
+  return rows;
+}
+
 async function _sbGet(url) {
   const res = await fetch(url, { headers: SB_HEADERS });
   if (!res.ok) throw new Error('Supabase read error ' + res.status);
   return res.json();
-}
-
-async function _sbPut(id, row) {
-  const res = await fetch(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id), {
-    method: 'PATCH', headers: SB_HEADERS, body: JSON.stringify(row)
-  });
-  if (res.status === 404 || (await res.clone().json().then(d => !d || !d.length).catch(() => true))) {
-    // Row doesn't exist, insert
-    const ins = await fetch(SB_PUZZLES, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(row) });
-    if (!ins.ok) throw new Error('Supabase insert error ' + ins.status);
-  }
 }
 
 // Fast index — titles/sizes only
@@ -51,27 +73,27 @@ async function cloudPublishPuzzle(title, data) {
   const id = (existing && existing.length) ? existing[0].id : ('p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7));
   const now = new Date();
   const row = { id, title, published_at: now.toLocaleDateString('en-ZA'), published_at_ms: now.getTime(), rows: data.rows, cols: data.cols, data };
+  const headers = await _sbWriteHeaders();
   if (existing && existing.length) {
-    const res = await fetch(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id), { method: 'PATCH', headers: SB_HEADERS, body: JSON.stringify(row) });
-    if (!res.ok) throw new Error('Update error ' + res.status);
+    const res = await fetch(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id), { method: 'PATCH', headers, body: JSON.stringify(row) });
+    await _sbCheckWrite(res, 'Update');
   } else {
-    const res = await fetch(SB_PUZZLES, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(row) });
-    if (!res.ok) throw new Error('Insert error ' + res.status);
+    const res = await fetch(SB_PUZZLES, { method: 'POST', headers, body: JSON.stringify(row) });
+    await _sbCheckWrite(res, 'Insert');
   }
   return id;
 }
 
 async function cloudRemovePuzzle(id) {
-  const res = await fetch(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id), { method: 'DELETE', headers: SB_HEADERS });
-  if (!res.ok) throw new Error('Delete error ' + res.status);
+  const res = await fetch(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id), { method: 'DELETE', headers: await _sbWriteHeaders() });
+  await _sbCheckWrite(res, 'Delete');
 }
 
-async function cloudSavePuzzles(list) {
-  // Delete all then reinsert — used by admin clear
-  await fetch(SB_PUZZLES + '?id=neq.none', { method: 'DELETE', headers: SB_HEADERS });
-  if (list && list.length) {
-    const rows = list.map(p => ({ id: p.id, title: p.title, published_at: p.publishedAt, published_at_ms: p.publishedAtMs, rows: p.rows, cols: p.cols, data: p.data }));
-    const res = await fetch(SB_PUZZLES, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(rows) });
-    if (!res.ok) throw new Error('Bulk insert error ' + res.status);
-  }
+// Renames a published puzzle and keeps the same puzzle (same id), so solvers'
+// progress, ratings and comments stay attached to it.
+async function cloudRenamePuzzle(id, newTitle) {
+  const clash = await _sbGet(SB_PUZZLES + '?title=eq.' + encodeURIComponent(newTitle) + '&select=id');
+  if (clash && clash.some(p => p.id !== id)) throw new Error('Another puzzle is already called "' + newTitle + '".');
+  const res = await fetch(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id), { method: 'PATCH', headers: await _sbWriteHeaders(), body: JSON.stringify({ title: newTitle }) });
+  await _sbCheckWrite(res, 'Rename');
 }

@@ -12,8 +12,13 @@
 <script src="site-banner.js?v=27"></script>
 <!--
   Arrow Word Puzzles — Manage & delete puzzles
-  CURRENT VERSION: v27
+  CURRENT VERSION: v32
   CHANGELOG:
+  v32 - Builders and admins sign in with Google (password kept as a backup for
+        now). Deleting is done as that person.
+        Rename now renames the puzzle itself. Before, it made a second copy
+        under the new name, which left solvers' progress on the old copy.
+  v31 - Loads the latest shared file (cloud-storage.js).
   v27 - Shows a TEST SITE banner when opened from the staging address (site-banner.js).
   v20 - Password protected manage/delete page.
 -->
@@ -89,7 +94,7 @@ nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:cen
   <div class="lock-box">
     <div style="font-size:40px;margin-bottom:12px">🔒</div>
     <h2>Delete Puzzles</h2>
-    <p>This area is restricted. Enter the password to continue.</p>
+    <p>This area is restricted. Sign in with your builder or admin account to continue.</p>
     <input type="password" id="pwd-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPwd()">
     <button class="lock-btn" onclick="checkPwd()">Unlock</button>
     <div class="lock-error" id="lock-error"></div>
@@ -123,7 +128,9 @@ nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:cen
   </div>
 </div>
 
-<script src="cloud-storage.js?v=20260506"></script>
+<script src="supabase-auth.js?v=32"></script>
+<script src="cloud-storage.js?v=32"></script>
+<script src="staff-access.js?v=32"></script>
 <script>
 // ── Password ───────────────────────────────────────────────────────────────────
 // Change this password to whatever you like.
@@ -136,12 +143,27 @@ function checkPwd(){
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('main-content').style.display='block';
     loadPuzzles();
+    _staff.refresh();
   } else {
     document.getElementById('lock-error').textContent='Incorrect password. Try again.';
     document.getElementById('pwd-input').value='';
     document.getElementById('pwd-input').focus();
   }
 }
+
+// v32: builders and admins sign in with Google; the password above still
+// works as a backup for now.
+const _staff=setupStaffAccess({
+  box:document.querySelector('#lock-screen .lock-box'),
+  before:document.getElementById('pwd-input'),
+  allowed:['builder','admin'],
+  isUnlocked:()=>document.getElementById('lock-screen').style.display==='none',
+  unlock:()=>{
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('main-content').style.display='block';
+    loadPuzzles();
+  }
+});
 
 // ── Puzzle list ────────────────────────────────────────────────────────────────
 let puzzles=[];
@@ -258,8 +280,8 @@ async function renameConfirm() {
   if (!puzzle) return;
   
   try {
-    // Publish with new title (keeps same ID and data)
-    await cloudPublishPuzzle(newTitle, puzzle.data);
+    // Rename in place: same puzzle, so solvers' progress stays attached
+    await cloudRenamePuzzle(_renameId, newTitle);
     puzzles = await cloudGetPuzzles();
     renderList();
     renameCancel();
