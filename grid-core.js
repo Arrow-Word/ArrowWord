@@ -1,10 +1,11 @@
-// grid-core.js — v30
+// grid-core.js — v33
 // ══════════════════════════════════════════════════════════════════════════════
 // The ONE shared copy of the code that draws an Arrow Word puzzle grid.
 // It was moved here, unchanged in behaviour, from builder.html — the builder is
 // the master copy. Pages call it through the "ArrowGrid" object.
 // Change how the grid is DRAWN here, not in the pages. Needs grid-core.css.
 //
+// v33 - Reports its version to the version badge (site-banner.js).
 // v30 - Now used by solver.html as well as builder.html.
 //       Clue text and answer letters use the Arimo font, which is shipped with
 //       the site (arimo-bold.woff2), so every device draws them the same way.
@@ -455,8 +456,9 @@
     });
   }
 
+  (window.AW_FILES=window.AW_FILES||{})['grid-core.js']='v33';
   window.ArrowGrid={
-    version:'v30',
+    version:'v33',
     GRID_FONT,fontReady,
     arrowSVG,answerArrowSVG,
     getWordCells,firstAnswerTarget,clueBoxWeight,

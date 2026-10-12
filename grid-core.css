@@ -1,9 +1,10 @@
-/* grid-core.css — v30
+/* grid-core.css — v33
    ══════════════════════════════════════════════════════════════════════════
    The ONE shared look of an Arrow Word puzzle grid: squares, clue boxes,
    clue text, answer squares and the small arrows.
    These rules were moved here, unchanged, from builder.html (the builder is
    the master copy). Change the grid's look HERE, not in the pages.
+   v33 - Reports its version to the version badge (site-banner.js).
    v30 - Now used by solver.html as well as builder.html.
          Grid text uses the Arimo font, shipped with the site, so every
          device draws clues the same way (Arimo has Arial's letter widths).
@@ -11,6 +12,9 @@
          The print styling moved here too.
    v29 - First version. Used by builder.html.
    ══════════════════════════════════════════════════════════════════════════ */
+
+/* Tells the version badge which version of this file is loaded. */
+:root{--aw-grid-core-css:'v33'}
 
 /* ── Font: shipped with the site, so it is the same on every device ───────── */
 @font-face{

@@ -8,12 +8,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
-<title>Arrow Word Puzzles — Free Online Puzzles to Solve</title>
-<script src="site-banner.js?v=27"></script>
+<title>Arrow Word Puzzles — Online Puzzles to Solve</title>
+<meta name="aw-version" content="v33">
+<script src="site-banner.js?v=33"></script>
 <!--
   Arrow Word Puzzles — Home page
-  CURRENT VERSION: v27
+  CURRENT VERSION: v33
   CHANGELOG:
+  v33 - Shows its version number in the bottom-right corner (click it for
+        details and to check for a newer upload).
+  v31 - Removed "free" and "no signup" wording; the page now explains that
+        solvers sign in with Google to save their progress. Removed the
+        outdated mention of Reveal. Loads only puzzle titles, not whole puzzles.
   v27 - Recent-puzzle cards open the new solver page (solver.html).
         Shows a TEST SITE banner on the staging address (site-banner.js).
   v17 - Public home page, solver focused.
@@ -100,8 +106,8 @@ footer a:hover{text-decoration:underline}
 
 <!-- Hero -->
 <section class="hero">
-  <h1>Free Arrow Word<br><span>Puzzles Online</span></h1>
-  <p class="hero-sub">Solve handcrafted arrow word puzzles in your browser — no download, no signup, completely free.</p>
+  <h1>Arrow Word<br><span>Puzzles Online</span></h1>
+  <p class="hero-sub">Solve handcrafted arrow word puzzles in your browser. Sign in with Google to save your progress and pick up where you left off, on any device.</p>
   <div class="hero-btns">
     <a href="directory.html" class="btn btn-primary"><img src="favicon.png" style="width:28px;height:28px;border-radius:6px;vertical-align:middle;margin-right:6px;object-fit:cover"> Browse puzzles</a>
     <a href="directory.html" class="btn btn-secondary">▶ Play now</a>
@@ -111,7 +117,7 @@ footer a:hover{text-decoration:underline}
 <!-- Live stats -->
 <div class="stats">
   <div class="stat"><div class="stat-num" id="stat-count">…</div><div class="stat-label">Puzzles available</div></div>
-  <div class="stat"><div class="stat-num">Free</div><div class="stat-label">Always free to play</div></div>
+  <div class="stat"><div class="stat-num">☁️</div><div class="stat-label">Progress saved to your account</div></div>
   <div class="stat"><div class="stat-num">📱</div><div class="stat-label">Works on any device</div></div>
 </div>
 
@@ -122,8 +128,8 @@ footer a:hover{text-decoration:underline}
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
-      <h3>Pick a puzzle</h3>
-      <p>Browse the directory and choose any puzzle you like. New ones are added regularly.</p>
+      <h3>Sign in and pick a puzzle</h3>
+      <p>Sign in with your Google account, then browse the directory and choose any puzzle you like. New ones are added regularly.</p>
     </div>
     <div class="step">
       <div class="step-num">2</div>
@@ -133,7 +139,7 @@ footer a:hover{text-decoration:underline}
     <div class="step">
       <div class="step-num">3</div>
       <h3>Fill in the letters</h3>
-      <p>Type letters into the green cells. Use Check answers to see how you're doing, or Reveal when you're stuck.</p>
+      <p>Type letters into the green cells. Use Check answers to see how you're doing. Your progress is saved as you go.</p>
     </div>
     <div class="step">
       <div class="step-num">4</div>
@@ -164,17 +170,17 @@ footer a:hover{text-decoration:underline}
 </section>
 
 <footer>
-  <p>Arrow Word Puzzles &nbsp;·&nbsp; <a href="directory.html">Puzzles</a> &nbsp;·&nbsp; <a href="about-builder.html">Builder info</a> &nbsp;·&nbsp; v27</p>
+  <p>Arrow Word Puzzles &nbsp;·&nbsp; <a href="directory.html">Puzzles</a> &nbsp;·&nbsp; <a href="about-builder.html">Builder info</a> &nbsp;·&nbsp; v33</p>
 </footer>
 
-<script src="cloud-storage.js"></script>
+<script src="cloud-storage.js?v=33"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 async function loadRecent(){
   const strip=document.getElementById('recent-strip');
   try{
-    const list=await cloudGetPuzzles();
+    const list=await cloudGetIndex();   // titles and sizes only — quicker than full puzzles
     document.getElementById('stat-count').textContent=list.length||'0';
     const recent=list.slice(0,4);
     if(!recent.length){

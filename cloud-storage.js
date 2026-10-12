@@ -1,4 +1,5 @@
-// cloud-storage.js — v32
+// cloud-storage.js — v33
+// v33 - Reports its version to the version badge (site-banner.js).
 // v32 - Publishing, changing and deleting puzzles are now done as the signed-in
 //       person (when the page has supabase-auth.js), so the database can check
 //       they are a builder. A change the database refuses now shows a clear
@@ -8,6 +9,7 @@
 // Puzzle storage via Supabase — no tokens needed, works on any device.
 // v31 - Removed two unused functions, including cloudSavePuzzles, an old
 //       "delete every puzzle and re-add them" routine nothing called any more.
+(window.AW_FILES = window.AW_FILES || {})['cloud-storage.js'] = 'v33';
 
 const SUPABASE_URL  = 'https://bfpoiewwvtdczkmoqlye.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmcG9pZXd3dnRkY3prbW9xbHllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODAxMTUsImV4cCI6MjA5MzQ1NjExNX0.EoIz2o7xg69tfAnSOp5wVusjc71s0cOmsEoSDwaxjso';

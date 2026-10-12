@@ -7,15 +7,24 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puzzle Directory — Arrow Word Puzzles</title>
-<script src="site-banner.js?v=27"></script>
+<meta name="aw-version" content="v33">
+<script src="site-banner.js?v=33"></script>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
 <!--
   Arrow Word Puzzles
   ══════════════════════════════════════════════════════
-  CURRENT VERSION: v27
+  CURRENT VERSION: v33
   ══════════════════════════════════════════════════════
   CHANGELOG:
+  v33 - Shows its version number in the bottom-right corner (click it for
+        details and to check for a newer upload).
+  v32 - Solved puzzles show the date they were solved.
+        The Puzzle directory heading uses the ArrowWord icon.
+  v31 - Page now has three sections: "Continue solving" (puzzles in progress,
+        most recently played first), the puzzle directory (puzzles not yet
+        started) and "Solved puzzles" at the bottom.
+        Removed the unused Facebook sign-in path.
   v27 - The solver moved to its own page (solver.html).
         This page now only browses puzzles and shows progress badges.
         Clicking Solve opens solver.html?id=PUZZLE_ID.
@@ -129,6 +138,14 @@ main{max-width:1000px;margin:0 auto;padding:24px}
 .signin-note{font-size:11px;color:#bbb;margin-top:14px;line-height:1.5}
 
 .puzzle-rating{font-size:11px;color:#f0a500;margin-top:2px}
+/* Page sections: Continue solving / Puzzle directory / Solved puzzles */
+.dir-section{margin-bottom:40px}
+.dir-section-title{font-size:19px;font-weight:700;color:#443366;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.dir-section-continue{background:#fffaf0;border:1px solid #f3dca0;border-radius:12px;padding:18px}
+.dir-section-solved .pcard{background:#fbfffb}
+.pcard-lastplayed{font-size:11px;color:#856404}
+.pcard-solved{font-size:11px;color:#155724}
+.dir-section-icon{width:24px;height:24px;border-radius:5px;object-fit:cover;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -185,8 +202,8 @@ main{max-width:1000px;margin:0 auto;padding:24px}
   </div>
 </div>
 
-<script src="cloud-storage.js?v=20260532"></script>
-<script src="supabase-auth.js?v=20260532"></script>
+<script src="cloud-storage.js?v=33"></script>
+<script src="supabase-auth.js?v=33"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -254,7 +271,6 @@ async function doSignIn(provider) {
   if (_pendingSolverId) rememberPending(_pendingSolverId);
   document.getElementById('signin-modal').classList.remove('open');
   if (provider === 'google') await sbSignInGoogle();
-  else if (provider === 'facebook') await sbSignInFacebook();
 }
 
 function cancelSignIn() {
@@ -342,21 +358,80 @@ function renderDir() {
   if (sort === 'newest') list = [...list].sort((a, b) => (b.publishedAtMs || 0) - (a.publishedAtMs || 0));
   else if (sort === 'oldest') list = [...list].sort((a, b) => (a.publishedAtMs || 0) - (b.publishedAtMs || 0));
   else list = [...list].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-  document.getElementById('count-line').textContent = list.length + ' puzzle' + (list.length === 1 ? '' : 's');
+
+  // Split into the three sections of the page
+  const inProgress = list.filter(p => getPuzzleStatus(p.id) === 'inprogress')
+    .sort((a, b) => lastPlayedMs(b.id) - lastPlayedMs(a.id));   // most recently played first
+  const solved = list.filter(p => getPuzzleStatus(p.id) === 'complete');
+  const notStarted = list.filter(p => getPuzzleStatus(p.id) === 'new');
+
+  const counts = [list.length + ' puzzle' + (list.length === 1 ? '' : 's')];
+  if (inProgress.length) counts.push(inProgress.length + ' in progress');
+  if (solved.length) counts.push(solved.length + ' solved');
+  document.getElementById('count-line').textContent = counts.join(' · ');
+
   const content = document.getElementById('dir-content');
   if (!list.length) {
     content.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>${q ? 'No puzzles match your search.' : 'No puzzles published yet.'}</p></div>`;
     return;
   }
-  const sizes = [...new Set(list.map(p => getSizeLabel(p)))];
-  if (activeSize === 'all' && sizes.length > 1 && !q && sort === 'alpha') {
-    content.innerHTML = sizes.sort().map(s => {
-      const group = list.filter(p => getSizeLabel(p) === s);
-      return `<div class="group-section"><div class="group-title">${s} grid <span class="group-count">${group.length} puzzle${group.length === 1 ? '' : 's'}</span></div><div class="puzzle-grid">${group.map(cardHtml).join('')}</div></div>`;
-    }).join('');
-  } else {
-    content.innerHTML = '<div class="puzzle-grid">' + list.map(cardHtml).join('') + '</div>';
+
+  let html = '';
+  if (inProgress.length) {
+    html += sectionHtml('dir-section-continue', '▶ Continue solving', inProgress, '<div class="puzzle-grid">' + inProgress.map(cardHtml).join('') + '</div>');
   }
+
+  // The puzzle directory: puzzles not started yet, grouped by grid size when listed A–Z
+  let dirBody;
+  if (!notStarted.length) {
+    dirBody = `<div class="empty-state" style="padding:32px 24px"><div class="empty-icon">🎉</div><p>${q ? 'No new puzzles match your search.' : 'You have started every puzzle in the directory. New ones are added regularly.'}</p></div>`;
+  } else {
+    const sizes = [...new Set(notStarted.map(p => getSizeLabel(p)))];
+    if (activeSize === 'all' && sizes.length > 1 && !q && sort === 'alpha') {
+      dirBody = sizes.sort().map(s => {
+        const group = notStarted.filter(p => getSizeLabel(p) === s);
+        return `<div class="group-section"><div class="group-title">${s} grid <span class="group-count">${group.length} puzzle${group.length === 1 ? '' : 's'}</span></div><div class="puzzle-grid">${group.map(cardHtml).join('')}</div></div>`;
+      }).join('');
+    } else {
+      dirBody = '<div class="puzzle-grid">' + notStarted.map(cardHtml).join('') + '</div>';
+    }
+  }
+  html += sectionHtml('dir-section-directory', '<img class="dir-section-icon" src="favicon.png" alt=""> Puzzle directory', notStarted, dirBody);
+
+  if (solved.length) {
+    html += sectionHtml('dir-section-solved', '✓ Solved puzzles', solved, '<div class="puzzle-grid">' + solved.map(cardHtml).join('') + '</div>');
+  }
+  content.innerHTML = html;
+}
+
+function sectionHtml(cls, title, items, body) {
+  return `<section class="dir-section ${cls}"><h2 class="dir-section-title">${title} <span class="group-count">${items.length} puzzle${items.length === 1 ? '' : 's'}</span></h2>${body}</section>`;
+}
+
+// When a puzzle was solved: from the account, or from this browser.
+function solvedMs(id) {
+  const row = _cloudProgress[id];
+  if (row && row.completed_at) return Date.parse(row.completed_at) || 0;
+  try {
+    const done = JSON.parse(localStorage.getItem('arrowword_complete') || '{}');
+    if (done[id]) return Number(done[id]) || 0;
+  } catch(e) {}
+  return 0;
+}
+
+function shortDate(ms) {
+  return new Date(ms).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// When a puzzle was last played: from the account, or from this browser.
+function lastPlayedMs(id) {
+  const row = _cloudProgress[id];
+  if (row && row.last_saved) return Date.parse(row.last_saved) || 0;
+  try {
+    const local = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
+    if (local[id] && local[id].savedAt) return local[id].savedAt;
+  } catch(e) {}
+  return 0;
 }
 
 function cardHtml(p) {
@@ -370,6 +445,8 @@ function cardHtml(p) {
     <div class="pcard-title">${escHtml(title)}</div>
     <div class="pcard-meta">Published ${p.publishedAt || ''}</div>
     ${builderCredit}
+    ${status === 'inprogress' && lastPlayedMs(p.id) ? `<div class="pcard-lastplayed">Last played ${shortDate(lastPlayedMs(p.id))}</div>` : ''}
+    ${status === 'complete' && solvedMs(p.id) ? `<div class="pcard-solved">Solved ${shortDate(solvedMs(p.id))}</div>` : ''}
     ${_puzzleRatings[p.id] ? `<div class="puzzle-rating">${'★'.repeat(Math.round(_puzzleRatings[p.id].avg_rating))}${'☆'.repeat(5-Math.round(_puzzleRatings[p.id].avg_rating))} ${parseFloat(_puzzleRatings[p.id].avg_rating).toFixed(1)}</div>` : ''}
     ${p.cols && p.rows ? `<div class="pcard-size">${p.cols}×${p.rows} grid</div>` : ''}
     <button class="btn-solve" onclick="solveClicked('${p.id}')">${btnLabel}</button>

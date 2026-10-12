@@ -8,13 +8,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
-<title>Puzzle Builder v32 — Arrow Word Puzzles</title>
-<script src="site-banner.js?v=27"></script>
+<title>Puzzle Builder v33 — Arrow Word Puzzles</title>
+<meta name="aw-version" content="v33">
+<script src="site-banner.js?v=33"></script>
 <!-- Arrow Word Puzzle Builder
      ════════════════════════════════════════════════
-     CURRENT VERSION: v32
+     CURRENT VERSION: v33
      ════════════════════════════════════════════════
      CHANGELOG:
+     v33 - Shows its version number in the bottom-right corner (click it for
+           details and to check for a newer upload).
      v32 - Builders sign in with Google; the builder opens for builder and admin
            accounts (password kept as a backup for now). A bar at the top shows
            who is signed in. Publishing and deleting are done as that person,
@@ -80,7 +83,7 @@
      v1  - Initial arrow word puzzle builder.
      ════════════════════════════════════════════════
 -->
-<link rel="stylesheet" href="grid-core.css?v=30">
+<link rel="stylesheet" href="grid-core.css?v=33">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;font-size:14px;color:#222;background:#f5f5f5;padding:16px}
@@ -187,9 +190,9 @@ td.t-answer{cursor:default}
     
   </div>
 </nav>
-<script src="supabase-auth.js?v=32"></script>
-<script src="cloud-storage.js?v=32"></script>
-<script src="staff-access.js?v=32"></script>
+<script src="supabase-auth.js?v=33"></script>
+<script src="cloud-storage.js?v=33"></script>
+<script src="staff-access.js?v=33"></script>
 <script>
 const BUILDER_PASSWORD = 'arrowword2024';
 const BUILDER_UNLOCK_KEY = 'builder_unlocked_v20';
@@ -212,7 +215,7 @@ window._staff=setupStaffAccess({
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-     title="Click for change history">v32 ▾</button>
+     title="Click for change history">v33 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
@@ -503,7 +506,7 @@ window._staff=setupStaffAccess({
   </div>
 </div>
 
-<script src="grid-core.js?v=30"></script>
+<script src="grid-core.js?v=33"></script>
 <script>
 // ── Shared drawing code ───────────────────────────────────────────────────────
 // v29: the code that DRAWS the grid (arrows, word layout, squares, clue boxes,
@@ -1921,6 +1924,7 @@ const CHANGELOG=[
 function openChangelog(){
   const body=document.getElementById('changelog-body');
   const log=[
+    {v:'v33',notes:['Every page now shows its version number in the bottom-right corner. Click it to see the versions of the shared files, and to check whether a newer copy of the page has been uploaded.']},
     {v:'v32',notes:['Sign in with your Google builder account to open the builder (the password still works for now). The bar at the top shows who is signed in. Publishing and deleting are done as you, ready for the database security update.']},
     {v:'v31',notes:['Tidy-up: removed old unused code. Loading a published puzzle and removing one from the directory are quicker, because the builder no longer downloads every puzzle to do it.']},
     {v:'v30',notes:['Clue text and answer letters now use a font that is shipped with the site (Arimo, which has the same letter widths as Arial). Solvers on every phone, tablet and computer now see your clues wrapped exactly as you see them here. The solver and both printouts now use the very same drawing code as the builder.']},

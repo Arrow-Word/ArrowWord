@@ -7,14 +7,23 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Solve Puzzle — Arrow Word Puzzles</title>
-<script src="site-banner.js?v=27"></script>
+<meta name="aw-version" content="v33">
+<script src="site-banner.js?v=33"></script>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
 <!--
   Arrow Word Puzzles — Solver page
   ══════════════════════════════════════════════════════
-  CURRENT VERSION: v30
+  CURRENT VERSION: v33
   ══════════════════════════════════════════════════════
+  v33 - Shows its version number in the bottom-right corner (click it for
+        details and to check for a newer upload).
+  v32 - "Save progress" on a solved puzzle no longer marks it as in progress;
+        it stays solved with its original solved date.
+        Solving a puzzle again doesn't change its solved date or ask for a
+        second rating.
+        "Clear" is now saved, so cleared letters don't come back next time.
+  v31 - Tidy-up: removed an unused style. Loads the latest shared files.
   v30 - The grid is now drawn by grid-core.js / grid-core.css, the very same
         code the builder uses, so a puzzle looks exactly as its builder made it.
         Grid text uses the Arimo font shipped with the site, so every device
@@ -30,7 +39,7 @@
   (Earlier history is in the changelog at the top of directory.html.)
   ══════════════════════════════════════════════════════
 -->
-<link rel="stylesheet" href="grid-core.css?v=30">
+<link rel="stylesheet" href="grid-core.css?v=33">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;background:#f5f0ff;color:#222;min-height:100vh}
@@ -92,7 +101,6 @@ td.t-clue:hover{background:#ddd0ee}
 .star.active{opacity:1}
 .star:hover{transform:scale(1.15)}
 .btn-rate{background:#7744bb;color:#fff;border:none;border-radius:7px;padding:11px 28px;font-size:14px;font-weight:600;cursor:pointer;margin-right:8px}
-.btn-skip{background:#fff;color:#888;border:1px solid #ddd;border-radius:7px;padding:10px 20px;font-size:13px;cursor:pointer}
 .celebration{display:none;font-size:48px;margin-bottom:16px}
 .comment-section{margin:20px 0;text-align:left}
 .comment-section label{display:block;font-size:13px;font-weight:600;color:#443366;margin-bottom:8px}
@@ -167,9 +175,9 @@ td.t-clue:hover{background:#ddd0ee}
     </div>
 </div>
 
-<script src="cloud-storage.js?v=20260532"></script>
-<script src="supabase-auth.js?v=20260532"></script>
-<script src="grid-core.js?v=30"></script>
+<script src="cloud-storage.js?v=33"></script>
+<script src="supabase-auth.js?v=33"></script>
+<script src="grid-core.js?v=33"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -270,7 +278,7 @@ function sSolveKeydown(e){
   else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){if(sActive&&sActive.idx>0){e.preventDefault();sActive.idx--;const[pr,pc]=sActive.cells[sActive.idx];const pi=sGetInp(pr,pc);if(pi){pi.focus();pi.select();}}}
   else if(e.key==='Escape'){sActive=null;sHighlight();inp.blur();}
 }
-function solverClear(){if(!confirm('Clear all your answers?'))return;document.querySelectorAll('#s-grid .solve-input').forEach(i=>{i.value='';i.classList.remove('wrong');});sActive=null;sHighlight();}
+function solverClear(){if(!confirm('Clear all your answers?'))return;document.querySelectorAll('#s-grid .solve-input').forEach(i=>{i.value='';i.classList.remove('wrong');});sActive=null;sHighlight();saveNow();}
 function sApplyZoom(){const w=document.getElementById('s-zoom-wrap');if(!w)return;w.style.transform='scale('+sCurZoom+')';document.getElementById('s-zoom-val').textContent=Math.round(sCurZoom*100)+'%';const tbl=document.getElementById('s-grid');if(tbl&&tbl.offsetWidth){w.style.width=(tbl.offsetWidth*sCurZoom)+'px';w.style.height=(tbl.offsetHeight*sCurZoom)+'px';}}
 function sSetZoom(z){sCurZoom=Math.max(0.25,Math.min(3,z));sApplyZoom();}
 function sZoomBy(d){sSetZoom(sCurZoom+d);}
@@ -361,7 +369,7 @@ async function initSolver() {
       _checkCount = prog.check_count || 0;
       sAlreadyComplete = !!prog.complete;
       if (prog.time_spent_seconds) { _timerSeconds = prog.time_spent_seconds; showTimer(); }
-      if (prog.answers && Object.keys(prog.answers).length) answers = prog.answers;
+      if (prog.answers) answers = prog.answers;   // may be empty after Clear
       cloudSavedAt = prog.last_saved ? (Date.parse(prog.last_saved) || 0) : 0;
     }
     const local = readLocal('arrowword_progress')[id];
@@ -406,7 +414,9 @@ function saveNow() {
   if (!_solverStarted || !sWords.length) return Promise.resolve();
   const answers = collectAnswers();
   const snapshot = JSON.stringify(answers);
-  const changed = !sAlreadyComplete && snapshot !== _lastSavedAnswers && Object.keys(answers).length > 0;
+  // Saves whenever the letters changed — including all letters cleared — but
+  // never for a solved puzzle, so it stays solved with its original date.
+  const changed = !sAlreadyComplete && snapshot !== _lastSavedAnswers;
   if (changed) {
     _lastSavedAnswers = snapshot;
     const local = readLocal('arrowword_progress');
@@ -431,6 +441,14 @@ function stopAutoSave() {
 // "Save progress" button
 async function saveProgress() {
   if (!sWords.length) return;
+  if (sAlreadyComplete) {
+    // Already solved: keep it solved (and keep its solved date). Only the time is saved.
+    await queueSave(flushTime);
+    const b = document.querySelector('.solve-toolbar-left .blue');
+    if (b) { const o = b.textContent; b.textContent = '✓ Saved!'; setTimeout(() => b.textContent = o, 1500); }
+    forceResetHighlights();
+    return;
+  }
   const answers = collectAnswers();
   _lastSavedAnswers = JSON.stringify(answers);
   const local = readLocal('arrowword_progress');
@@ -478,6 +496,13 @@ async function sMaybeCelebrate(){
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
   sActive=null;sHighlight();
   stopTimer(); stopAutoSave();
+  if(sAlreadyComplete){
+    // Solved again: the first solve (and its date and rating) is already
+    // recorded, so only the extra time is saved.
+    if(sbGetUser())await queueSave(flushTime);
+    alert('🎉 Solved again — well done!');
+    return;
+  }
   // Save completion
   const answers=collectAnswers();
   sAlreadyComplete=true;

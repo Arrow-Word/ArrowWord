@@ -1,4 +1,5 @@
-// supabase-auth.js — v32
+// supabase-auth.js — v33
+// v33 - Reports its version to the version badge (site-banner.js).
 // v32 - Added sbGetMyRole() (the signed-in person's role, with a clear error if
 //       it can't be read) and sbGetAccessToken() (lets database changes be
 //       made as the signed-in person).
@@ -8,6 +9,7 @@
 // Handles Supabase sign-in (Google) and user progress, ratings and comments.
 // Loaded by directory.html, solver.html and admin.html.
 // ══════════════════════════════════════════════════════════════════════════════
+(window.AW_FILES = window.AW_FILES || {})['supabase-auth.js'] = 'v33';
 
 const _AUTH_URL  = 'https://bfpoiewwvtdczkmoqlye.supabase.co';
 const _AUTH_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmcG9pZXd3dnRkY3prbW9xbHllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODAxMTUsImV4cCI6MjA5MzQ1NjExNX0.EoIz2o7xg69tfAnSOp5wVusjc71s0cOmsEoSDwaxjso';
