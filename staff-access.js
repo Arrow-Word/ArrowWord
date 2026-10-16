@@ -1,4 +1,4 @@
-// staff-access.js — v33
+// staff-access.js — v32
 // ══════════════════════════════════════════════════════════════════════════════
 // Google sign-in for the staff pages: builder, admin and delete puzzles.
 // Adds a "Sign in with Google" button and a status line to the page's lock box,
@@ -10,10 +10,8 @@
 // whether they will be able to publish once the database is locked down.
 //
 // Needs supabase-auth.js to be loaded first.
-// v33 - Reports its version to the version badge (site-banner.js).
 // v32 - First version.
 // ══════════════════════════════════════════════════════════════════════════════
-(window.AW_FILES = window.AW_FILES || {})['staff-access.js'] = 'v33';
 
 // o.box          the lock box element the sign-in button goes into
 // o.before       element inside the box to put the sign-in button above
