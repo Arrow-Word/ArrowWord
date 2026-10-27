@@ -9,11 +9,16 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
 <title>Manage & Delete Puzzles — Arrow Word Puzzles</title>
-<script src="site-banner.js?v=27"></script>
+<meta name="aw-version" content="v36">
+<script src="site-banner.js?v=33"></script>
 <!--
   Arrow Word Puzzles — Manage & delete puzzles
-  CURRENT VERSION: v32
+  CURRENT VERSION: v36
   CHANGELOG:
+  v36 - Builders and admins can sign in with email and password as well as Google.
+  v34 - Publish dates are shown in each visitor's own date format.
+  v33 - Shows its version number in the bottom-right corner (click it for
+        details and to check for a newer upload).
   v32 - Builders and admins sign in with Google (password kept as a backup for
         now). Deleting is done as that person.
         Rename now renames the puzzle itself. Before, it made a second copy
@@ -128,9 +133,9 @@ nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:cen
   </div>
 </div>
 
-<script src="supabase-auth.js?v=32"></script>
-<script src="cloud-storage.js?v=32"></script>
-<script src="staff-access.js?v=32"></script>
+<script src="supabase-auth.js?v=36"></script>
+<script src="cloud-storage.js?v=34"></script>
+<script src="staff-access.js?v=36"></script>
 <script>
 // ── Password ───────────────────────────────────────────────────────────────────
 // Change this password to whatever you like.

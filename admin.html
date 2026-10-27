@@ -6,11 +6,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="favicon.png">
 <title>Admin Dashboard — Arrow Word Puzzles</title>
-<script src="site-banner.js?v=27"></script>
+<meta name="aw-version" content="v36">
+<script src="site-banner.js?v=33"></script>
 <!--
   Arrow Word Puzzles — Admin dashboard
-  CURRENT VERSION: v32
+  CURRENT VERSION: v36
   CHANGELOG:
+  v36 - The admin can sign in with email and password as well as Google.
+  v34 - Dates are shown in each visitor's own date format (they were always
+        shown South African style).
+  v33 - Shows its version number in the bottom-right corner (click it for
+        details and to check for a newer upload).
   v32 - The admin signs in with Google; the page opens for admin accounts
         (password kept as a backup for now).
   v31 - Tidy-up: removed unused code and styling. Loads the latest shared files.
@@ -101,9 +107,9 @@ tr:hover td{background:#faf8ff}
 
 </div>
 
-<script src="supabase-auth.js?v=32"></script>
-<script src="cloud-storage.js?v=32"></script>
-<script src="staff-access.js?v=32"></script>
+<script src="supabase-auth.js?v=36"></script>
+<script src="cloud-storage.js?v=34"></script>
+<script src="staff-access.js?v=36"></script>
 <script>
 const ADMIN_PASSWORD = 'arrowword2024';
 
@@ -170,8 +176,8 @@ async function loadStats(){
     else uTbody.innerHTML=users.map(u=>`<tr>
       <td>${u.display_name||'—'}</td>
       <td>${u.email||'—'}</td>
-      <td>${u.created_at?new Date(u.created_at).toLocaleDateString('en-ZA'):'—'}</td>
-      <td>${u.last_active?new Date(u.last_active).toLocaleDateString('en-ZA'):'—'}</td>
+      <td>${u.created_at?new Date(u.created_at).toLocaleDateString():'—'}</td>
+      <td>${u.last_active?new Date(u.last_active).toLocaleDateString():'—'}</td>
       <td>${userPuzzleCount[u.id]||0}</td>
     </tr>`).join('');
 
@@ -224,7 +230,7 @@ async function loadStats(){
           <td>${mins}</td>
           <td style="color:#f0a500">${stars}</td>
           <td>${p.check_count||0}</td>
-          <td>${p.last_saved?new Date(p.last_saved).toLocaleDateString('en-ZA'):'—'}</td>
+          <td>${p.last_saved?new Date(p.last_saved).toLocaleDateString():'—'}</td>
         </tr>`;
       }).join('');
     }
@@ -257,7 +263,7 @@ async function loadStats(){
           <td>${userName}</td>
           <td>${typeLabel}</td>
           <td title="${c.comment_text}">${commentText}</td>
-          <td>${new Date(c.created_at).toLocaleDateString('en-ZA')}</td>
+          <td>${new Date(c.created_at).toLocaleDateString()}</td>
         </tr>`;
       }).join('');
     }

@@ -8,14 +8,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
-<title>Puzzle Builder v35 — Arrow Word Puzzles</title>
-<meta name="aw-version" content="v35">
+<title>Puzzle Builder v36 — Arrow Word Puzzles</title>
+<meta name="aw-version" content="v36">
 <script src="site-banner.js?v=33"></script>
 <!-- Arrow Word Puzzle Builder
      ════════════════════════════════════════════════
-     CURRENT VERSION: v35
+     CURRENT VERSION: v36
      ════════════════════════════════════════════════
      CHANGELOG:
+     v36 - Builders can sign in with email and password as well as Google.
      v35 - Republishing an edited puzzle keeps its original publish date.
      v34 - Dates are shown in each visitor's own date format (they were always
            shown South African style).
@@ -193,9 +194,9 @@ td.t-answer{cursor:default}
     
   </div>
 </nav>
-<script src="supabase-auth.js?v=33"></script>
+<script src="supabase-auth.js?v=36"></script>
 <script src="cloud-storage.js?v=35"></script>
-<script src="staff-access.js?v=33"></script>
+<script src="staff-access.js?v=36"></script>
 <script>
 const BUILDER_PASSWORD = 'arrowword2024';
 const BUILDER_UNLOCK_KEY = 'builder_unlocked_v20';
@@ -218,7 +219,7 @@ window._staff=setupStaffAccess({
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-     title="Click for change history">v35 ▾</button>
+     title="Click for change history">v36 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
@@ -1927,6 +1928,7 @@ const CHANGELOG=[
 function openChangelog(){
   const body=document.getElementById('changelog-body');
   const log=[
+    {v:'v36',notes:['You can now sign in with an email address and password as well as with Google.']},
     {v:'v35',notes:['Republishing an edited puzzle (for example after fixing clue fit) now keeps its original publish date, so it no longer shows up as new in the directory.']},
     {v:'v34',notes:['Dates are now shown in each person\'s own date format, ready for international users.']},
     {v:'v33',notes:['Every page now shows its version number in the bottom-right corner. Click it to see the versions of the shared files, and to check whether a newer copy of the page has been uploaded.']},

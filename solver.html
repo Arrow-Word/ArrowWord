@@ -7,15 +7,18 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Solve Puzzle — Arrow Word Puzzles</title>
-<meta name="aw-version" content="v33">
+<meta name="aw-version" content="v36">
 <script src="site-banner.js?v=33"></script>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
 <!--
   Arrow Word Puzzles — Solver page
   ══════════════════════════════════════════════════════
-  CURRENT VERSION: v33
+  CURRENT VERSION: v36
   ══════════════════════════════════════════════════════
+  v36 - Accounts without a profile picture (email sign-in) no longer show a
+        broken image. Loads the new sign-in file.
+  v34 - Publish dates are shown in each visitor's own date format.
   v33 - Shows its version number in the bottom-right corner (click it for
         details and to check for a newer upload).
   v32 - "Save progress" on a solved puzzle no longer marks it as in progress;
@@ -175,8 +178,8 @@ td.t-clue:hover{background:#ddd0ee}
     </div>
 </div>
 
-<script src="cloud-storage.js?v=33"></script>
-<script src="supabase-auth.js?v=33"></script>
+<script src="cloud-storage.js?v=34"></script>
+<script src="supabase-auth.js?v=36"></script>
 <script src="grid-core.js?v=33"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -325,6 +328,7 @@ if (!sCurPuzzleId) {
       navUser.style.display = 'flex';
       document.getElementById('nav-name').textContent = user.user_metadata?.full_name || user.email || '';
       document.getElementById('nav-avatar').src = user.user_metadata?.avatar_url || '';
+      document.getElementById('nav-avatar').style.display = user.user_metadata?.avatar_url ? '' : 'none';
       if (!_solverStarted) { _solverStarted = true; initSolver(); }
     } else {
       navUser.style.display = 'none';

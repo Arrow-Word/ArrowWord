@@ -7,16 +7,20 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puzzle Directory — Arrow Word Puzzles</title>
-<meta name="aw-version" content="v33">
+<meta name="aw-version" content="v36">
 <script src="site-banner.js?v=33"></script>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
 <!--
   Arrow Word Puzzles
   ══════════════════════════════════════════════════════
-  CURRENT VERSION: v33
+  CURRENT VERSION: v36
   ══════════════════════════════════════════════════════
   CHANGELOG:
+  v36 - The sign-in box offers email and password as well as Google
+        (sign in, create account, forgot password).
+  v34 - Dates are shown in each visitor's own date format (they were always
+        shown South African style).
   v33 - Shows its version number in the bottom-right corner (click it for
         details and to check for a newer upload).
   v32 - Solved puzzles show the date they were solved.
@@ -135,6 +139,10 @@ main{max-width:1000px;margin:0 auto;padding:24px}
 .btn-google:hover{box-shadow:0 2px 8px rgba(0,0,0,0.15)}
 .btn-guest{width:100%;background:#fff;color:#888;border:1px solid #e0e0e0;border-radius:8px;padding:11px;font-size:13px;cursor:pointer}
 .btn-guest:hover{background:#f5f5f5}
+.signin-or{display:flex;align-items:center;gap:10px;color:#aaa;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px}
+.signin-or::before,.signin-or::after{content:'';flex:1;border-top:1px solid #eee}
+#signin-modal{overflow-y:auto}
+.signin-box{max-height:none;margin:auto}
 .signin-note{font-size:11px;color:#bbb;margin-top:14px;line-height:1.5}
 
 .puzzle-rating{font-size:11px;color:#f0a500;margin-top:2px}
@@ -196,14 +204,16 @@ main{max-width:1000px;margin:0 auto;padding:24px}
       <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Continue with Google
     </button>
+    <div class="signin-or">or</div>
+    <div id="email-signin"></div>
 
-    <button class="btn-guest" onclick="cancelSignIn()">Not now</button>
-<p class="signin-note">Sign in with your Google account to track your progress across devices. We only store your puzzle progress — nothing else.</p>
+    <button class="btn-guest" onclick="cancelSignIn()" style="margin-top:14px">Not now</button>
+<p class="signin-note">Sign in with Google or with your email address to track your progress across devices.</p>
   </div>
 </div>
 
-<script src="cloud-storage.js?v=33"></script>
-<script src="supabase-auth.js?v=33"></script>
+<script src="cloud-storage.js?v=34"></script>
+<script src="supabase-auth.js?v=36"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -248,6 +258,7 @@ sbOnUserChanged(async user => {
     navUser.style.display = 'flex';
     navName.textContent = user.user_metadata?.full_name || user.email || '';
     navAvatar.src = user.user_metadata?.avatar_url || '';
+    navAvatar.style.display = user.user_metadata?.avatar_url ? '' : 'none';
     document.getElementById('signin-modal').classList.remove('open');
     // Signed in with a puzzle waiting — open it in the solver page
     const id = _pendingSolverId || readPending();
@@ -272,6 +283,11 @@ async function doSignIn(provider) {
   document.getElementById('signin-modal').classList.remove('open');
   if (provider === 'google') await sbSignInGoogle();
 }
+
+// Email sign-in form inside the sign-in box (v36)
+sbMountEmailForm(document.getElementById('email-signin'), {
+  onBefore: () => { if (_pendingSolverId) rememberPending(_pendingSolverId); }
+});
 
 function cancelSignIn() {
   _pendingSolverId = null;
@@ -420,7 +436,7 @@ function solvedMs(id) {
 }
 
 function shortDate(ms) {
-  return new Date(ms).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 // When a puzzle was last played: from the account, or from this browser.

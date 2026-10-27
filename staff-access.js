@@ -1,6 +1,6 @@
-// staff-access.js — v32
+// staff-access.js — v36
 // ══════════════════════════════════════════════════════════════════════════════
-// Google sign-in for the staff pages: builder, admin and delete puzzles.
+// Google or email sign-in for the staff pages: builder, admin and delete puzzles.
 // Adds a "Sign in with Google" button and a status line to the page's lock box,
 // checks the account's role in the database, and opens the page for accounts
 // with an allowed role (builder / admin).
@@ -10,8 +10,11 @@
 // whether they will be able to publish once the database is locked down.
 //
 // Needs supabase-auth.js to be loaded first.
+// v36 - Builders and admins can also sign in with email and password.
+// v33 - Reports its version to the version badge (site-banner.js).
 // v32 - First version.
 // ══════════════════════════════════════════════════════════════════════════════
+(window.AW_FILES = window.AW_FILES || {})['staff-access.js'] = 'v36';
 
 // o.box          the lock box element the sign-in button goes into
 // o.before       element inside the box to put the sign-in button above
@@ -39,11 +42,17 @@ function setupStaffAccess(o) {
   const wrap = document.createElement('div');
   wrap.className = 'staff-access';
   wrap.innerHTML = '<button type="button" class="staff-google">' + GOOGLE + ' Sign in with Google</button>' +
+    '<div class="staff-email" style="margin-top:12px"></div>' +
     '<div class="staff-status">Checking sign-in…</div>' +
     '<div class="staff-or">or use the password</div>';
   o.box.insertBefore(wrap, o.before);
+  // The box is taller now; let it scroll on small screens.
+  if (o.box.parentElement) o.box.parentElement.style.overflowY = 'auto';
+  o.box.style.margin = 'auto';
   const btn = wrap.querySelector('.staff-google');
   const status = wrap.querySelector('.staff-status');
+  const emailBox = wrap.querySelector('.staff-email');
+  if (typeof sbMountEmailForm === 'function') sbMountEmailForm(emailBox);
   btn.addEventListener('click', () => { status.className = 'staff-status'; status.textContent = 'Opening Google sign-in…'; sbSignInGoogle(); });
 
   const bar = document.createElement('div');
@@ -69,7 +78,7 @@ function setupStaffAccess(o) {
     } else if (state.user) {
       showBar('warn', '⚠ Signed in as <strong>' + esc(name(state.user)) + '</strong>, which is not ' + esc(allowedText) + ' account. Saving changes will stop working once the security update is switched on. <button type="button" data-act="out">Sign out</button>');
     } else {
-      showBar('warn', '⚠ You opened this page with the password. Please sign in with Google: saving changes will soon need it. <button type="button" data-act="in">Sign in with Google</button>');
+      showBar('warn', '⚠ You opened this page with the password. Please sign in (Google or email): saving changes will soon need it. <button type="button" data-act="in">Sign in with Google</button>');
     }
   }
   bar.addEventListener('click', e => {
@@ -83,11 +92,13 @@ function setupStaffAccess(o) {
     state.user = user; state.role = null; state.error = null;
     if (!user) {
       btn.style.display = '';
+      emailBox.style.display = '';
       setStatus('Not signed in.');
       refreshBar();
       return;
     }
     btn.style.display = 'none';
+    emailBox.style.display = 'none';
     setStatus('Signed in as ' + name(user) + '. Checking your access…');
     const r = await sbGetMyRole();
     if (state.user !== user) return;   // signed out meanwhile
@@ -101,6 +112,7 @@ function setupStaffAccess(o) {
       setStatus('Signed in as ' + name(user) + ', but this account is not ' + allowedText + ' account. Ask the site admin for access.', true);
       btn.style.display = '';
       btn.lastChild.textContent = ' Sign in with a different Google account';
+      emailBox.style.display = '';
     }
     refreshBar();
   }
