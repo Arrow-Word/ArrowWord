@@ -7,17 +7,15 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Solve Puzzle — Arrow Word Puzzles</title>
-<meta name="aw-version" content="v37">
+<meta name="aw-version" content="v36">
 <script src="site-banner.js?v=33"></script>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
 <!--
   Arrow Word Puzzles — Solver page
   ══════════════════════════════════════════════════════
-  CURRENT VERSION: v37
+  CURRENT VERSION: v36
   ══════════════════════════════════════════════════════
-  v37 - The browser's backup copy of progress is kept per account, so two
-        people using the same browser no longer see each other's progress.
   v36 - Accounts without a profile picture (email sign-in) no longer show a
         broken image. Loads the new sign-in file.
   v34 - Publish dates are shown in each visitor's own date format.
@@ -344,11 +342,8 @@ if (!sCurPuzzleId) {
 }
 
 // ── Load puzzle + saved progress ──────────────────────────────────────────────
-// The browser's backup copy of progress is kept separately for each account
-// (v37), so people sharing a browser never see each other's progress.
-function localKey(key) { const u = sbGetUser(); return u ? key + ':' + u.id : null; }
-function readLocal(key) { const k = localKey(key); if (!k) return {}; try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch(e) { return {}; } }
-function writeLocal(key, value) { const k = localKey(key); if (!k) return; try { localStorage.setItem(k, JSON.stringify(value)); } catch(e) {} }
+function readLocal(key) { try { return JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch(e) { return {}; } }
+function writeLocal(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) {} }
 
 function collectAnswers() {
   const answers = {};
